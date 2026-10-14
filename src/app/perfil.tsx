@@ -12,8 +12,8 @@ const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Perfil() {
   const { sessao, sair } = useAstra();
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
+  const [nome, setNome] = useState(auth.currentUser?.displayName ?? '');
+  const [email, setEmail] = useState(auth.currentUser?.email ?? '');
   const [curso, setCurso] = useState('');
   const [periodo, setPeriodo] = useState('');
   const [editando, setEditando] = useState(false);
@@ -25,8 +25,6 @@ export default function Perfil() {
   useEffect(() => {
     const usuario = auth.currentUser;
     if (sessao !== 'logado' || !usuario) return;
-    setNome(usuario.displayName ?? '');
-    setEmail(usuario.email ?? '');
     getDoc(doc(db, 'perfisAprendizagem', usuario.uid))
       .then((snap) => {
         if (snap.exists()) {

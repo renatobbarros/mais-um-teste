@@ -19,7 +19,7 @@ import { haQuanto } from '@/lib/datas';
 import { useAstra } from '@/lib/store';
 import type { FonteId } from '@/lib/types';
 
-const FONTES_MENSAGEM: FonteId[] = ['whatsapp', 'telegram', 'classroom', 'discord'];
+const FONTES_MENSAGEM: FonteId[] = ['whatsapp', 'telegram', 'classroom', 'discord', 'email'];
 
 export default function Fontes() {
   const { sessao, sigaa, sigaaEm, conectarSigaa, desconectarSigaa, avisos, importarMensagens, removerAvisosDaFonte, ponte, definirPonte } =

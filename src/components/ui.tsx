@@ -190,7 +190,7 @@ export function Secao({
           {titulo}
         </Txt>
         {acao && onAcao ? (
-          <Pressable onPress={onAcao} hitSlop={10} accessibilityRole="button">
+          <Pressable onPress={onAcao} hitSlop={10} accessibilityRole="button" accessibilityLabel={acao}>
             <Txt v="legenda" cor="primary" style={{ fontWeight: '700' }}>
               {acao}
             </Txt>
@@ -269,6 +269,7 @@ export function Chip({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={rotulo}
       accessibilityState={{ selected: ativo }}
       style={[
         estilos.chip,
@@ -395,6 +396,7 @@ export const FONTES: Record<FonteId, { nome: string; icone: IconName }> = {
   whatsapp: { nome: 'WhatsApp', icone: 'chatbubble-ellipses-outline' },
   telegram: { nome: 'Telegram', icone: 'paper-plane-outline' },
   discord: { nome: 'Discord', icone: 'game-controller-outline' },
+  email: { nome: 'E-mail', icone: 'mail-outline' },
   manual: { nome: 'Manual', icone: 'create-outline' },
 };
 
