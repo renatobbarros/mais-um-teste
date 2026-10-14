@@ -24,22 +24,16 @@ Facilitar o acompanhamento da rotina acadêmica por meio da centralização e or
 
 ## ✨ Funcionalidades
 
-Atualmente, o projeto contempla:
+- 🔐 Cadastro, login com e-mail e senha e login com Google;
+- 🏠 **Início**: próximos prazos e atalhos;
+- 📅 **Agenda**: prazos e avaliações de todas as fontes, com conclusão de tarefas e tarefas manuais;
+- 🔔 **Avisos**: mensagens sem repetição, com filtro por prazos, avisos e materiais;
+- ✨ **Assuntos**: agrupamento automático das mensagens por tema (TF-IDF + K-Means, k pela silhueta), com correção feita pelo estudante;
+- 🔗 **Fontes**: conexão com o SIGAA da UFRPE e importação de mensagens do WhatsApp, Telegram, Classroom e Discord;
+- 📖 **Diário** de sono, estudo e estresse, e tela de **Desempenho** com IRA, histórico, pontos de atenção e médias da rotina;
+- 🌗 Tema claro e escuro automático.
 
-- 🔐 Cadastro de usuários;
-- 🔑 Autenticação por e-mail e senha;
-- 🔵 Autenticação com Google;
-- 🏠 Tela inicial;
-
-> Existem funcionalidades que ainda estão em desenvolvimento.
-
-## 📱 Interface
-
-<p align="center">
-  <img src="assets/docs/login.png" width="152">
-  <img src="assets/docs/cadastro.png" width="150">
-  <img src="assets/docs/home.png" width="150">
-</p>
+O que ainda falta em relação ao artigo está em [docs/ALINHAMENTO-ARTIGO.md](docs/ALINHAMENTO-ARTIGO.md).
 
 ## 🛠️ Tecnologias
 
@@ -72,7 +66,7 @@ Para funcionalidades que utilizam código nativo, como o Google Sign-In:
 1. Clone o repositório
 ```bash
 git clone https://github.com/renatobbarros/mais-um-teste.git
-cd dsi
+cd mais-um-teste
 ```
 2. Instale as dependências
 ```bash
@@ -82,6 +76,33 @@ npm install
 ```bash
 npx expo start
 ```
+
+Para ver o app sem conta, use **Explorar com dados de exemplo** na tela de login.
+
+### 🏛️ Ponte com o SIGAA
+
+O app não fala direto com o SIGAA. Um pequeno servidor (pasta `server/`) usa a [sigaa-api-UFRPE](https://github.com/renatobbarros/sigaa-api-UFRPE) para ler os dados e entregá-los ao app.
+
+```bash
+cd server
+npm install
+npm start          # SIGAA real
+npm run mock       # dados de demonstração, sem usuário nem senha
+```
+
+Depois, na aba **Fontes**, informe usuário e senha do SIGAA. A senha é usada só naquele momento e não fica salva.
+
+Endereço da ponte, conforme onde o app roda:
+
+| Onde o app roda | Endereço |
+| --- | --- |
+| Navegador e iOS Simulator | `http://localhost:3333` (padrão) |
+| Emulador Android | `http://10.0.2.2:3333` (padrão) |
+| Celular físico | IP do computador, ex.: `http://192.168.0.10:3333`, em **Fontes > Avançado** |
+
+Em produção, coloque a ponte atrás de HTTPS, já que ela recebe a senha do SIGAA.
+
+> A pasta `server/vendor/sigaa-api` é uma cópia compilada da biblioteca. Para atualizá-la, rode `npm run build` na `sigaa-api-UFRPE` e copie a pasta `dist` para lá.
 
 ### 📱 Android
 Para executar em um dispositivo Andorid com o ambiente nativo configurado:
