@@ -1,4 +1,4 @@
-export type FonteId = 'sigaa' | 'classroom' | 'whatsapp' | 'telegram' | 'discord' | 'manual';
+export type FonteId = 'sigaa' | 'classroom' | 'whatsapp' | 'telegram' | 'discord' | 'email' | 'manual';
 
 export type TipoAviso = 'prazo' | 'comunicado' | 'material';
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -7,24 +7,23 @@ import { useTheme } from '@/hooks/use-theme';
 import { fmt } from '@/lib/analise';
 import { chaveDia } from '@/lib/datas';
 import { useAstra } from '@/lib/store';
+import type { RegistroDiario } from '@/lib/types';
 
 const ROTULOS_ESTRESSE = ['Tranquilo', 'Leve', 'Médio', 'Alto', 'Muito alto'];
 
 export default function Diario() {
-  const { diario, registrarDia } = useAstra();
+  const { diario } = useAstra();
   const hoje = diario.find((r) => r.dia === chaveDia(new Date()));
+  // A chave refaz o formulário com o registro de hoje quando ele existir
+  return <Formulario key={hoje ? 'com-registro' : 'novo'} hoje={hoje} />;
+}
+
+function Formulario({ hoje }: { hoje?: RegistroDiario }) {
+  const { diario, registrarDia } = useAstra();
   const [sono, setSono] = useState(hoje?.sonoHoras ?? 7);
   const [estudo, setEstudo] = useState(hoje?.estudoHoras ?? 2);
   const [estresse, setEstresse] = useState(hoje?.estresse ?? 3);
   const [salvo, setSalvo] = useState(false);
-
-  useEffect(() => {
-    if (hoje) {
-      setSono(hoje.sonoHoras);
-      setEstudo(hoje.estudoHoras);
-      setEstresse(hoje.estresse);
-    }
-  }, [hoje?.dia]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function salvar() {
     registrarDia({ sonoHoras: sono, estudoHoras: estudo, estresse });

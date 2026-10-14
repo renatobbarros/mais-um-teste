@@ -7,7 +7,7 @@ import { buscarResumoSigaa, PONTE_PADRAO } from './api';
 import { chaveDia, diasAte } from './datas';
 import { avisosDemo, diarioDemo, resumoDemo } from './demo';
 import { agruparAvisos, agruparRepetidos, type ResultadoAgrupamento } from './ml';
-import { criarAvisos } from './parse';
+import { criarAvisos, detectarDisciplina } from './parse';
 import type { Atividade, Aviso, FonteId, RegistroDiario, ResumoSigaa } from './types';
 
 export type Sessao = 'carregando' | 'logado' | 'demo' | 'anonimo';
@@ -81,11 +81,16 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
   const modoDemo = useRef(false);
   // Referência sempre atual para funções que não podem depender do estado (evita recriá-las)
   const dadosRef = useRef(dados);
-  dadosRef.current = dados;
+  useEffect(() => {
+    dadosRef.current = dados;
+  }, [dados]);
 
   // Sessão: Firebase ou modo demonstração
   useEffect(() => {
-    return onAuthStateChanged(auth, (usuario) => {
+    // Sem rede o Firebase pode demorar a responder: depois de 6 s mostramos o login
+    const limite = setTimeout(() => setSessao((s) => (s === 'carregando' ? 'anonimo' : s)), 6000);
+    const cancelar = onAuthStateChanged(auth, (usuario) => {
+      clearTimeout(limite);
       if (usuario) {
         modoDemo.current = false;
         setNome(usuario.displayName ?? '');
@@ -96,6 +101,10 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
         setSessao('anonimo');
       }
     });
+    return () => {
+      clearTimeout(limite);
+      cancelar();
+    };
   }, []);
 
   // Carrega os dados salvos de quem entrou
@@ -141,7 +150,14 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
 
   const conectarSigaa = useCallback(async (usuario: string, senha: string) => {
     const resumo = await buscarResumoSigaa(dadosRef.current.ponte, usuario, senha);
-    setDados((d) => ({ ...d, sigaa: resumo, sigaaEm: new Date().toISOString() }));
+    const nomes = resumo.disciplinas.map((x) => x.titulo);
+    setDados((d) => ({
+      ...d,
+      sigaa: resumo,
+      sigaaEm: new Date().toISOString(),
+      // Avisos importados antes da conexão passam a reconhecer a disciplina
+      avisos: d.avisos.map((a) => (a.disciplina ? a : { ...a, disciplina: detectarDisciplina(a.texto, nomes) })),
+    }));
   }, []);
 
   const desconectarSigaa = useCallback(

@@ -197,6 +197,8 @@ function disciplinaDominante(membros: Aviso[]): string | undefined {
   return melhor && melhor[1] >= membros.length / 2 ? melhor[0] : undefined;
 }
 
+const LIMITE_CORRECAO = 0.45;
+
 export interface ResultadoAgrupamento {
   grupos: Grupo[];
   /** Silhueta do k escolhido; null quando há poucos avisos para medir. */
@@ -243,10 +245,28 @@ export function agruparAvisos(
   // Correções do estudante: o aviso vai para o grupo onde está o aviso-âncora.
   const posicao = new Map(avisos.map((a, i) => [a.id, i]));
   const rotulos = melhor.rotulos.slice();
+  const corrigidos = new Set<number>();
   Object.entries(correcoes).forEach(([id, ancora]) => {
     const i = posicao.get(id);
     const j = posicao.get(ancora);
-    if (i !== undefined && j !== undefined) rotulos[i] = rotulos[j];
+    if (i !== undefined && j !== undefined) {
+      rotulos[i] = rotulos[j];
+      corrigidos.add(i);
+    }
+  });
+  // Aprendizado ativo: mensagens muito parecidas com uma corrigida seguem a correção
+  vetores.forEach((v, i) => {
+    if (corrigidos.has(i)) return;
+    let melhorSim = 0;
+    let destino = -1;
+    corrigidos.forEach((c) => {
+      const sim = cosseno(v, vetores[c]);
+      if (sim > melhorSim) {
+        melhorSim = sim;
+        destino = c;
+      }
+    });
+    if (destino >= 0 && melhorSim >= LIMITE_CORRECAO) rotulos[i] = rotulos[destino];
   });
 
   const grupos: Grupo[] = [];

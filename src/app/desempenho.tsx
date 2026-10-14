@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Botao, Cabecalho, Cartao, Icone, Secao, Selo, Tela, Txt, Vazio } from '@/components/ui';
+import { Cabecalho, Cartao, Icone, Secao, Selo, Tela, Txt, Vazio } from '@/components/ui';
 import { alertasRotina, fmt, mediasRotina, pontosDeAtencao } from '@/lib/analise';
 import { useAstra } from '@/lib/store';
 import type { HistoricoDisciplina } from '@/lib/types';
