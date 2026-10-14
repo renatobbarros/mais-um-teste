@@ -1,5 +1,5 @@
 /** No navegador não há lembretes agendados no sistema. */
-import type { Atividade } from './types';
+import type { Lembrete } from './lembretesLogica';
 
 export const lembretesDisponiveis = false;
 
@@ -9,6 +9,6 @@ export async function pedirPermissaoLembretes(): Promise<boolean> {
 
 export async function cancelarLembretes(): Promise<void> {}
 
-export async function agendarLembretes(_atividades: Atividade[]): Promise<number> {
+export async function agendarLembretes(_lembretes: Lembrete[]): Promise<number> {
   return 0;
 }

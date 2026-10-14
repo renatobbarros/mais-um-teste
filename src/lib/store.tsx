@@ -1,10 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { onAuthStateChanged } from 'firebase/auth';
 
 import { auth } from '../services/firebase';
 import { buscarResumoSigaa, PONTE_PADRAO } from './api';
+import { apagarCredenciais, cofreDisponivel, lerCredenciais, salvarCredenciais } from './cofre';
 import { agendarLembretes, cancelarLembretes, lembretesDisponiveis, pedirPermissaoLembretes } from './lembretes';
+import { calcularNotificacoes } from './lembretesLogica';
+import { precisaAtualizar } from './sync';
 import { buscarResumoNativo, sigaaNativoDisponivel } from './sigaaNativo';
 import { chaveDia, diasAte } from './datas';
 import { avisosDemo, diarioDemo, resumoDemo } from './demo';
@@ -27,6 +31,10 @@ interface Persistido {
   modoSigaa: 'nativo' | 'ponte';
   /** Lembretes de prazo no celular. */
   lembretes: boolean;
+  /** Resumo diário às 7h30 com os prazos do dia. */
+  resumoDiario: boolean;
+  /** A senha do SIGAA está no cofre seguro deste aparelho. */
+  lembrarSenha: boolean;
 }
 
 const VAZIO: Persistido = {
@@ -40,6 +48,8 @@ const VAZIO: Persistido = {
   ponte: PONTE_PADRAO,
   modoSigaa: sigaaNativoDisponivel ? 'nativo' : 'ponte',
   lembretes: false,
+  resumoDiario: false,
+  lembrarSenha: false,
 };
 
 interface Contexto extends Persistido {
@@ -50,7 +60,10 @@ interface Contexto extends Persistido {
   repetidos: Record<string, Aviso[]>;
   entrarDemo: () => void;
   sair: () => void;
-  conectarSigaa: (usuario: string, senha: string) => Promise<void>;
+  conectarSigaa: (usuario: string, senha: string, lembrar?: boolean) => Promise<void>;
+  /** Atualização automática do SIGAA em andamento e último erro dela. */
+  sincronizando: boolean;
+  erroSync: string;
   desconectarSigaa: () => void;
   importarMensagens: (texto: string, fonte: FonteId) => number;
   removerAvisosDaFonte: (fonte: FonteId) => void;
@@ -63,6 +76,7 @@ interface Contexto extends Persistido {
   definirModoSigaa: (modo: 'nativo' | 'ponte') => void;
   /** Liga ou desliga os lembretes. Devolve false se o usuário negou a permissão. */
   alternarLembretes: (ligar: boolean) => Promise<boolean>;
+  alternarResumoDiario: (ligar: boolean) => Promise<boolean>;
 }
 
 const AstraContext = createContext<Contexto | null>(null);
@@ -90,11 +104,18 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
   const [dados, setDados] = useState<Persistido>(VAZIO);
   const carregado = useRef(false);
   const modoDemo = useRef(false);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [erroSync, setErroSync] = useState('');
   // Referência sempre atual para funções que não podem depender do estado (evita recriá-las)
   const dadosRef = useRef(dados);
+  const chaveRef = useRef<string | null>(null);
   useEffect(() => {
     dadosRef.current = dados;
   }, [dados]);
+
+  useEffect(() => {
+    chaveRef.current = chave;
+  }, [chave]);
 
   // Sessão: Firebase ou modo demonstração
   useEffect(() => {
@@ -154,18 +175,14 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
 
   const sair = useCallback(() => {
     void cancelarLembretes();
+    if (chaveRef.current) void apagarCredenciais(chaveRef.current);
     modoDemo.current = false;
     setDados(VAZIO);
     setChave(null);
     setSessao('anonimo');
   }, []);
 
-  const conectarSigaa = useCallback(async (usuario: string, senha: string) => {
-    const { modoSigaa, ponte } = dadosRef.current;
-    const resumo =
-      modoSigaa === 'nativo' && sigaaNativoDisponivel
-        ? await buscarResumoNativo(usuario, senha)
-        : await buscarResumoSigaa(ponte, usuario, senha);
+  const aplicarResumo = useCallback((resumo: ResumoSigaa) => {
     const nomes = resumo.disciplinas.map((x) => x.titulo);
     setDados((d) => ({
       ...d,
@@ -176,10 +193,38 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const desconectarSigaa = useCallback(
-    () => setDados((d) => ({ ...d, sigaa: null, sigaaEm: null })),
-    []
+  const lerSigaa = useCallback(async (usuario: string, senha: string) => {
+    const { modoSigaa, ponte } = dadosRef.current;
+    return modoSigaa === 'nativo' && sigaaNativoDisponivel
+      ? buscarResumoNativo(usuario, senha)
+      : buscarResumoSigaa(ponte, usuario, senha);
+  }, []);
+
+  const conectarSigaa = useCallback(
+    async (usuario: string, senha: string, lembrar = false) => {
+      const resumo = await lerSigaa(usuario, senha);
+      aplicarResumo(resumo);
+      setErroSync('');
+      const uid = chaveRef.current;
+      if (cofreDisponivel && uid && uid !== 'demo') {
+        if (lembrar) {
+          await salvarCredenciais(uid, { usuario, senha }).catch(() => {});
+          setDados((d) => ({ ...d, lembrarSenha: true }));
+        } else {
+          await apagarCredenciais(uid);
+          setDados((d) => ({ ...d, lembrarSenha: false }));
+        }
+      }
+    },
+    [aplicarResumo, lerSigaa]
   );
+
+  const desconectarSigaa = useCallback(() => {
+    const uid = chaveRef.current;
+    if (uid) void apagarCredenciais(uid);
+    setErroSync('');
+    setDados((d) => ({ ...d, sigaa: null, sigaaEm: null, lembrarSenha: false }));
+  }, []);
 
   const importarMensagens = useCallback((texto: string, fonte: FonteId) => {
     const disciplinas = (dadosRef.current.sigaa?.disciplinas ?? []).map((x) => x.titulo);
@@ -285,21 +330,62 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => a.data.localeCompare(b.data));
   }, [dados.sigaa, dados.manuais, dados.concluidas, avisosOrdenados]);
 
-  const alternarLembretes = useCallback(async (ligar: boolean) => {
-    if (ligar) {
-      if (!(await pedirPermissaoLembretes())) return false;
-    } else {
-      await cancelarLembretes();
-    }
-    setDados((d) => ({ ...d, lembretes: ligar }));
+  const alternarNotificacao = useCallback(async (campo: 'lembretes' | 'resumoDiario', ligar: boolean) => {
+    if (ligar && !(await pedirPermissaoLembretes())) return false;
+    setDados((d) => {
+      const novo = { ...d, [campo]: ligar };
+      if (!novo.lembretes && !novo.resumoDiario) void cancelarLembretes();
+      return novo;
+    });
     return true;
   }, []);
+  const alternarLembretes = useCallback((ligar: boolean) => alternarNotificacao('lembretes', ligar), [alternarNotificacao]);
+  const alternarResumoDiario = useCallback((ligar: boolean) => alternarNotificacao('resumoDiario', ligar), [alternarNotificacao]);
 
-  // Mantém os lembretes do sistema iguais às atividades pendentes
+  // Mantém as notificações do sistema iguais às atividades pendentes
   useEffect(() => {
     if (!lembretesDisponiveis || sessao === 'carregando' || sessao === 'anonimo') return;
-    if (dados.lembretes) void agendarLembretes(atividades);
-  }, [atividades, dados.lembretes, sessao]);
+    if (!dados.lembretes && !dados.resumoDiario) return;
+    void agendarLembretes(calcularNotificacoes(atividades, { lembretes: dados.lembretes, resumoDiario: dados.resumoDiario }));
+  }, [atividades, dados.lembretes, dados.resumoDiario, sessao]);
+
+  // Atualização automática do SIGAA (só com a senha guardada no cofre, a pedido do estudante)
+  const atualizarSozinho = useCallback(async () => {
+    const uid = chaveRef.current;
+    const atual = dadosRef.current;
+    if (!cofreDisponivel || !uid || uid === 'demo' || !atual.lembrarSenha) return;
+    if (!precisaAtualizar(atual.sigaaEm)) return;
+    const c = await lerCredenciais(uid);
+    if (!c) return;
+    setSincronizando(true);
+    try {
+      aplicarResumo(await lerSigaa(c.usuario, c.senha));
+      setErroSync('');
+    } catch (e) {
+      setErroSync((e as Error).message || 'Não foi possível atualizar o SIGAA.');
+    } finally {
+      setSincronizando(false);
+    }
+  }, [aplicarResumo, lerSigaa]);
+
+  const sincronizacaoEmCurso = useRef(false);
+  useEffect(() => {
+    if (sessao !== 'logado' || !dados.lembrarSenha) return;
+    const rodar = async () => {
+      if (sincronizacaoEmCurso.current) return;
+      sincronizacaoEmCurso.current = true;
+      try {
+        await atualizarSozinho();
+      } finally {
+        sincronizacaoEmCurso.current = false;
+      }
+    };
+    void rodar();
+    const inscricao = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') void rodar();
+    });
+    return () => inscricao.remove();
+  }, [sessao, dados.lembrarSenha, atualizarSozinho]);
 
   const valor: Contexto = {
     ...dados,
@@ -323,6 +409,9 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     definirPonte,
     definirModoSigaa,
     alternarLembretes,
+    alternarResumoDiario,
+    sincronizando,
+    erroSync,
   };
 
   return <AstraContext.Provider value={valor}>{children}</AstraContext.Provider>;

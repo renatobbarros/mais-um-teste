@@ -440,7 +440,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   chip: {
-    minHeight: 36,
+    minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: Radius.pill,
     borderWidth: 1,

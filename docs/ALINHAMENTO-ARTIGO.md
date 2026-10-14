@@ -40,9 +40,21 @@ Base: *ASTRA – Ambiente de Suporte à Trajetória e Rotina Acadêmica* (arquiv
 
 ## Qualidade
 
-- `npm test`: 37 testes automáticos da lógica (datas, mensagens, prazos, agrupamento, correções, desempenho, lembretes).
+- `npm test`: 80 testes automáticos da lógica (datas, mensagens, prazos, agrupamento, correções, desempenho, lembretes, resumo diário, atualização automática, exportação e contraste de cores WCAG AA).
 - `cd server && npm test`: 4 testes da camada HTTP do celular contra um SIGAA falso (redirecionamento manual, cookies, ISO-8859-1, login certo e errado).
 - `npx expo export` para Android, iOS e web: os três pacotes compilam.
 - `npx tsc --noEmit` e `npx eslint src`: sem erros nem avisos.
 - Fluxos testados no navegador em modo demonstração: login e cadastro (validações), agenda (criar, concluir, filtrar), avisos, assuntos (corrigir grupo), fontes (importar mensagens), diário e desempenho.
 - **Não testado:** login real no SIGAA, login com Google e gravação do perfil no Firebase (exigem contas reais), e execução em celular físico (SIGAA direto, `expo/fetch` com redirecionamento manual e notificações).
+
+## Melhorias feitas depois (lista de sugestões)
+
+| Sugestão | Situação |
+| --- | --- |
+| Atualização automática do SIGAA | Feita, opt-in, senha no cofre seguro do celular, a cada 6 h. Só nativo. |
+| Importar mensagens do WhatsApp por compartilhamento | **Não feita.** Receber conteúdo compartilhado exige código nativo e um build próprio, e não dá para testar aqui. Entrou o botão "Colar da área de transferência". |
+| Hospedar a ponte com HTTPS | **Preparada, não publicada.** `Dockerfile.ponte` e `render.yaml` prontos; publicar exige uma conta sua. Os passos do Dockerfile foram simulados localmente, mas o Docker em si não rodou. |
+| Retreinar com as correções | **Parcial.** Há exportação local das correções (o estudante escolhe se compartilha). Enviar para um servidor exige backend e consentimento, e não foi feito. |
+| Widget ou resumo diário | **Resumo diário feito** (notificação às 7h30). Widget de tela inicial exige código nativo e não foi feito. |
+| Acessibilidade e idiomas | **Acessibilidade feita:** contraste AA testado nos dois temas (corrigi o cinza claro), alvos de toque de 44 px, nomes para leitores de tela. **Inglês não feito:** o público e o artigo são em português. |
+| Testes ponta a ponta | **Fluxos Maestro escritos** (`.maestro/`), **não executados**: exigem o app instalado em um aparelho. |

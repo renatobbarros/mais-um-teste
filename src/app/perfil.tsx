@@ -13,7 +13,7 @@ import { auth, db } from '@/services/firebase';
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Perfil() {
-  const { sessao, sair, lembretes, alternarLembretes } = useAstra();
+  const { sessao, sair, lembretes, alternarLembretes, resumoDiario, alternarResumoDiario } = useAstra();
   const [nome, setNome] = useState(auth.currentUser?.displayName ?? '');
   const [email, setEmail] = useState(auth.currentUser?.email ?? '');
   const [curso, setCurso] = useState('');
@@ -82,7 +82,12 @@ export default function Perfil() {
           <Selo rotulo="Modo demonstração" tom="primario" />
           <Txt cor="textSecondary">Você está vendo dados de exemplo. Crie uma conta para guardar suas informações.</Txt>
         </Cartao>
-        <CartaoLembretes ligado={lembretes} onAlternar={alternarLembretes} />
+        <CartaoLembretes
+          lembretes={lembretes}
+          resumoDiario={resumoDiario}
+          onLembretes={alternarLembretes}
+          onResumo={alternarResumoDiario}
+        />
         <Botao titulo="Sair da demonstração" variante="secundario" onPress={sairDaConta} />
       </Tela>
     );
@@ -115,41 +120,77 @@ export default function Perfil() {
         ) : null}
       </Cartao>
 
-      <CartaoLembretes ligado={lembretes} onAlternar={alternarLembretes} />
+      <CartaoLembretes
+        lembretes={lembretes}
+        resumoDiario={resumoDiario}
+        onLembretes={alternarLembretes}
+        onResumo={alternarResumoDiario}
+      />
 
       <Botao titulo="Sair da conta" icone="log-out-outline" variante="perigo" onPress={sairDaConta} />
     </Tela>
   );
 }
 
-function CartaoLembretes({ ligado, onAlternar }: { ligado: boolean; onAlternar: (ligar: boolean) => Promise<boolean> }) {
-  const t = useTheme();
+function CartaoLembretes({
+  lembretes,
+  resumoDiario,
+  onLembretes,
+  onResumo,
+}: {
+  lembretes: boolean;
+  resumoDiario: boolean;
+  onLembretes: (ligar: boolean) => Promise<boolean>;
+  onResumo: (ligar: boolean) => Promise<boolean>;
+}) {
   const [erro, setErro] = useState('');
   if (!lembretesDisponiveis) return null;
 
-  async function mudar(ligar: boolean) {
+  async function mudar(acao: (ligar: boolean) => Promise<boolean>, ligar: boolean) {
     setErro('');
-    const ok = await onAlternar(ligar);
-    if (!ok) setErro('Sem permissão para notificações. Ative nas configurações do celular.');
+    if (!(await acao(ligar))) setErro('Sem permissão para notificações. Ative nas configurações do celular.');
   }
 
   return (
-    <Cartao>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Txt v="subtitulo">Lembretes de prazo</Txt>
-          <Txt v="legenda" cor="textSecondary">
-            Avisa 1 dia e 2 horas antes de cada prazo.
-          </Txt>
-        </View>
-        <Switch
-          value={ligado}
-          onValueChange={mudar}
-          accessibilityLabel="Lembretes de prazo"
-          trackColor={{ true: t.primary, false: t.border }}
-        />
-      </View>
+    <Cartao style={{ gap: 16 }}>
+      <LinhaInterruptor
+        titulo="Lembretes de prazo"
+        texto="Avisa 1 dia e 2 horas antes de cada prazo."
+        valor={lembretes}
+        onChange={(v) => mudar(onLembretes, v)}
+      />
+      <LinhaInterruptor
+        titulo="Resumo diário"
+        texto="Às 7h30, lista os prazos do dia."
+        valor={resumoDiario}
+        onChange={(v) => mudar(onResumo, v)}
+      />
       {erro ? <Mensagem tom="erro" texto={erro} /> : null}
     </Cartao>
+  );
+}
+
+function LinhaInterruptor({
+  titulo,
+  texto,
+  valor,
+  onChange,
+}: {
+  titulo: string;
+  texto: string;
+  valor: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flex: 1 }}>
+        <Txt v="subtitulo">{titulo}</Txt>
+        <Txt v="legenda" cor="textSecondary">
+          {texto}
+        </Txt>
+      </View>
+      <Switch value={valor} onValueChange={onChange} accessibilityLabel={titulo} trackColor={{ true: t.primary, false: t.border }} />
+    </View>
   );
 }
