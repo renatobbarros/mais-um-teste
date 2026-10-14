@@ -15,7 +15,7 @@ A proposta é reunir, em um único ambiente, informações como conteúdos de di
 
 O projeto é desenvolvido no contexto acadêmico e contempla, além da aplicação mobile, uma etapa de análise de dados e a elaboração de documentação científica.
 
-A etapa de análise de dados pode ser encontrada no seguinte repositório: [*Análise de Dataset*](https://github.com/BrunoFellype/pisi3)
+A etapa de análise de dados foi desenvolvida em um repositório separado.
 
 
 ## 🎯 Objetivo
@@ -71,7 +71,7 @@ Para funcionalidades que utilizam código nativo, como o Google Sign-In:
 
 1. Clone o repositório
 ```bash
-git clone https://github.com/BrunoFellype/dsi.git
+git clone https://github.com/renatobbarros/mais-um-teste.git
 cd dsi
 ```
 2. Instale as dependências
