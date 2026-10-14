@@ -6,10 +6,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "mock": "node mock-start.js"
+    "mock": "node mock-start.js",
+    "test": "node --test --test-force-exit teste-nativo.js"
   },
   "engines": { "node": ">=18" },
   "dependencies": {
-    "sigaa-api": "file:./vendor/sigaa-api"
+    "sigaa-api": "file:../vendor/sigaa-api"
   }
 }

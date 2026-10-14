@@ -17,12 +17,13 @@ import {
 } from '@/components/ui';
 import { haQuanto } from '@/lib/datas';
 import { useAstra } from '@/lib/store';
+import { sigaaNativoDisponivel } from '@/lib/sigaaNativo';
 import type { FonteId } from '@/lib/types';
 
 const FONTES_MENSAGEM: FonteId[] = ['whatsapp', 'telegram', 'classroom', 'discord', 'email'];
 
 export default function Fontes() {
-  const { sessao, sigaa, sigaaEm, conectarSigaa, desconectarSigaa, avisos, importarMensagens, removerAvisosDaFonte, ponte, definirPonte } =
+  const { sessao, sigaa, sigaaEm, conectarSigaa, desconectarSigaa, avisos, importarMensagens, removerAvisosDaFonte, ponte, definirPonte, modoSigaa, definirModoSigaa } =
     useAstra();
 
   return (
@@ -37,6 +38,8 @@ export default function Fontes() {
           curso={sigaa?.aluno.curso}
           ponte={ponte}
           onPonte={definirPonte}
+          modo={modoSigaa}
+          onModo={definirModoSigaa}
           onConectar={conectarSigaa}
           onDesconectar={desconectarSigaa}
         />
@@ -60,6 +63,8 @@ function CartaoSigaa({
   curso,
   ponte,
   onPonte,
+  modo,
+  onModo,
   onConectar,
   onDesconectar,
 }: {
@@ -69,6 +74,8 @@ function CartaoSigaa({
   curso?: string;
   ponte: string;
   onPonte: (url: string) => void;
+  modo: 'nativo' | 'ponte';
+  onModo: (m: 'nativo' | 'ponte') => void;
   onConectar: (usuario: string, senha: string) => Promise<void>;
   onDesconectar: () => void;
 }) {
@@ -77,6 +84,7 @@ function CartaoSigaa({
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
   const [avancado, setAvancado] = useState(false);
+  const usaNativo = sigaaNativoDisponivel && modo === 'nativo';
 
   async function conectar() {
     setErro('');
@@ -131,7 +139,9 @@ function CartaoSigaa({
             onSubmitEditing={conectar}
           />
           <Txt v="legenda" cor="textMuted">
-            A senha é usada só agora para ler seus dados e não fica salva.
+            {usaNativo
+              ? 'A senha vai direto do seu celular para o SIGAA e não fica salva.'
+              : 'A senha passa pela ponte só para ler seus dados e não fica salva.'}
           </Txt>
           {erro ? <Mensagem tom="erro" texto={erro} /> : null}
           <Botao
@@ -147,14 +157,24 @@ function CartaoSigaa({
             onPress={() => setAvancado((v) => !v)}
           />
           {avancado ? (
-            <Campo
-              rotulo="Endereço da ponte do SIGAA"
-              value={ponte}
-              onChangeText={onPonte}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-            />
+            <View style={{ gap: 12 }}>
+              {sigaaNativoDisponivel ? (
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  <Chip rotulo="Direto no celular" ativo={modo === 'nativo'} onPress={() => onModo('nativo')} />
+                  <Chip rotulo="Pela ponte" ativo={modo === 'ponte'} onPress={() => onModo('ponte')} />
+                </View>
+              ) : null}
+              {!usaNativo ? (
+                <Campo
+                  rotulo="Endereço da ponte do SIGAA"
+                  value={ponte}
+                  onChangeText={onPonte}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+              ) : null}
+            </View>
           ) : null}
         </>
       )}

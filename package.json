@@ -7,6 +7,8 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-google-signin/google-signin": "^16.1.5",
+    "buffer": "^6.0.3",
+    "cheerio": "^1.0.0-rc.12",
     "expo": "~57.0.21",
     "expo-constants": "~57.0.17",
     "expo-device": "~57.0.1",
@@ -14,6 +16,7 @@
     "expo-glass-effect": "~57.0.2",
     "expo-image": "~57.0.4",
     "expo-linking": "~57.0.9",
+    "expo-notifications": "~57.0.23",
     "expo-router": "~57.0.20",
     "expo-splash-screen": "~57.0.8",
     "expo-status-bar": "~57.0.1",
@@ -21,6 +24,10 @@
     "expo-system-ui": "~57.0.3",
     "expo-web-browser": "~57.0.2",
     "firebase": "^12.19.0",
+    "he": "^2.0.0",
+    "lodash": "^4.18.1",
+    "path": "^0.12.7",
+    "querystring": "^0.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -29,7 +36,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "url": "^0.11.4"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

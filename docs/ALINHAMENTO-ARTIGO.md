@@ -7,7 +7,7 @@ Base: *ASTRA – Ambiente de Suporte à Trajetória e Rotina Acadêmica* (arquiv
 | Promessa do artigo | Onde está no app | Situação |
 | --- | --- | --- |
 | Centralizar informações de disciplinas, prazos, avaliações e comunicados em um só lugar | Abas **Início**, **Agenda** e **Avisos** | Feito |
-| Reunir fontes dispersas: SIGAA, Classroom, WhatsApp, Telegram, Discord | Aba **Fontes** | SIGAA via ponte (`server/`); WhatsApp, Telegram, Classroom, Discord e e-mail por mensagens coladas |
+| Reunir fontes dispersas: SIGAA, Classroom, WhatsApp, Telegram, Discord | Aba **Fontes** | SIGAA direto no celular (ou pela ponte no navegador); WhatsApp, Telegram, Classroom, Discord e e-mail por mensagens coladas |
 | Converter mensagens soltas em prazos, comunicados e materiais | `src/lib/parse.ts` classifica cada mensagem e extrai data e hora | Feito (regras) |
 | Reduzir ruído e repetição entre canais | `agruparRepetidos` em `src/lib/ml.ts`: mensagens parecidas viram um aviso só ("Também enviado em…") | Feito |
 | **PP1:** agrupar mensagens por assunto sem rótulo prévio (TF-IDF + K-Means) | Aba **Assuntos**; `src/lib/ml.ts` | Feito, roda no aparelho |
@@ -22,8 +22,8 @@ Base: *ASTRA – Ambiente de Suporte à Trajetória e Rotina Acadêmica* (arquiv
 1. **Modelos preditivos de desempenho (Seção 2.2.3).** Regressão Linear, Random Forest e Gradient Boosting são treinados no repositório de análise de dados e **não rodam dentro do app**. Hoje o app usa regras simples e transparentes (média abaixo de 6, muitas faltas, pouco sono). Para fechar essa lacuna é preciso publicar o modelo treinado (por exemplo, como API) e chamá-lo a partir da tela Desempenho.
 2. **Retreino com o feedback.** As correções do estudante reorganizam os grupos no aparelho, mas não são enviadas para treinar um modelo central.
 3. **Classroom, WhatsApp, Telegram e Discord automáticos.** Essas plataformas não oferecem acesso simples para um app de terceiros. Por isso a entrada é manual (colar mensagens ou a exportação de conversa do WhatsApp).
-4. **SIGAA real validado ponta a ponta.** A ponte foi testada só em modo demonstração. O login real depende de usuário e senha do SIGAA e não foi exercitado nesta etapa.
-5. **Notificações do sistema.** O app mostra avisos dentro dele, mas não dispara lembretes no celular. Não implementei por não poder testar em aparelho real.
+4. **SIGAA real validado ponta a ponta.** A leitura direta no celular e a ponte foram testadas só contra um SIGAA falso e em modo demonstração. O login real depende de usuário e senha e ainda não foi exercitado.
+5. **Lembretes em aparelho real.** A lógica está testada e o app compila para Android e iOS, mas as notificações ainda não foram vistas em um celular.
 6. **Persistência dos dados de rotina na nuvem.** Avisos, diário e correções ficam salvos só no aparelho. O Firestore guarda apenas o perfil.
 
 ## Pontos para alinhar no texto do artigo
@@ -34,12 +34,15 @@ Base: *ASTRA – Ambiente de Suporte à Trajetória e Rotina Acadêmica* (arquiv
 
 ## Decisões de arquitetura
 
-- **Ponte do SIGAA (`server/`).** A `sigaa-api-UFRPE` é uma biblioteca para Node que faz web scraping. Ela não roda dentro de um app de celular, por isso um pequeno servidor faz o login, lê os dados e devolve JSON ao app. A senha é usada só durante a requisição e não é gravada.
+- **SIGAA dentro do app.** A `sigaa-api-UFRPE` foi feita para Node. No celular, a camada HTTP dela é trocada por uma versão com `expo/fetch` (`vendor/sigaa-api/dist/session/sigaa-http.native.js`), que trata redirecionamentos à mão e mantém o cookie jar da própria biblioteca. O restante da biblioteca roda sem mudanças. A senha vai direto do celular ao SIGAA.
+- **Ponte (`server/`).** No navegador o SIGAA bloqueia chamadas diretas (CORS). Um pequeno servidor faz o login e devolve JSON ao app. A senha é usada só durante a requisição e não é gravada.
 - **IA no aparelho.** TF-IDF, K-Means e Silhueta foram escritos em TypeScript (`src/lib/ml.ts`). As mensagens dos estudantes não saem do celular.
 
 ## Qualidade
 
-- `npm test`: 32 testes automáticos da lógica (datas, leitura de mensagens, prazos, agrupamento, correções, desempenho).
+- `npm test`: 37 testes automáticos da lógica (datas, mensagens, prazos, agrupamento, correções, desempenho, lembretes).
+- `cd server && npm test`: 4 testes da camada HTTP do celular contra um SIGAA falso (redirecionamento manual, cookies, ISO-8859-1, login certo e errado).
+- `npx expo export` para Android, iOS e web: os três pacotes compilam.
 - `npx tsc --noEmit` e `npx eslint src`: sem erros nem avisos.
 - Fluxos testados no navegador em modo demonstração: login e cadastro (validações), agenda (criar, concluir, filtrar), avisos, assuntos (corrigir grupo), fontes (importar mensagens), diário e desempenho.
-- **Não testado:** login real no SIGAA, login com Google e gravação do perfil no Firebase (exigem contas reais), e execução em celular físico.
+- **Não testado:** login real no SIGAA, login com Google e gravação do perfil no Firebase (exigem contas reais), e execução em celular físico (SIGAA direto, `expo/fetch` com redirecionamento manual e notificações).

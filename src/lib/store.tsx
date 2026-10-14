@@ -4,6 +4,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 
 import { auth } from '../services/firebase';
 import { buscarResumoSigaa, PONTE_PADRAO } from './api';
+import { agendarLembretes, cancelarLembretes, lembretesDisponiveis, pedirPermissaoLembretes } from './lembretes';
+import { buscarResumoNativo, sigaaNativoDisponivel } from './sigaaNativo';
 import { chaveDia, diasAte } from './datas';
 import { avisosDemo, diarioDemo, resumoDemo } from './demo';
 import { agruparAvisos, agruparRepetidos, type ResultadoAgrupamento } from './ml';
@@ -21,6 +23,10 @@ interface Persistido {
   diario: RegistroDiario[];
   correcoes: Record<string, string>;
   ponte: string;
+  /** De onde ler o SIGAA: direto no celular ou por um servidor (ponte). */
+  modoSigaa: 'nativo' | 'ponte';
+  /** Lembretes de prazo no celular. */
+  lembretes: boolean;
 }
 
 const VAZIO: Persistido = {
@@ -32,6 +38,8 @@ const VAZIO: Persistido = {
   diario: [],
   correcoes: {},
   ponte: PONTE_PADRAO,
+  modoSigaa: sigaaNativoDisponivel ? 'nativo' : 'ponte',
+  lembretes: false,
 };
 
 interface Contexto extends Persistido {
@@ -52,6 +60,9 @@ interface Contexto extends Persistido {
   registrarDia: (r: Omit<RegistroDiario, 'dia'>) => void;
   corrigirGrupo: (avisoId: string, ancoraId: string) => void;
   definirPonte: (url: string) => void;
+  definirModoSigaa: (modo: 'nativo' | 'ponte') => void;
+  /** Liga ou desliga os lembretes. Devolve false se o usuário negou a permissão. */
+  alternarLembretes: (ligar: boolean) => Promise<boolean>;
 }
 
 const AstraContext = createContext<Contexto | null>(null);
@@ -142,6 +153,7 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sair = useCallback(() => {
+    void cancelarLembretes();
     modoDemo.current = false;
     setDados(VAZIO);
     setChave(null);
@@ -149,7 +161,11 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const conectarSigaa = useCallback(async (usuario: string, senha: string) => {
-    const resumo = await buscarResumoSigaa(dadosRef.current.ponte, usuario, senha);
+    const { modoSigaa, ponte } = dadosRef.current;
+    const resumo =
+      modoSigaa === 'nativo' && sigaaNativoDisponivel
+        ? await buscarResumoNativo(usuario, senha)
+        : await buscarResumoSigaa(ponte, usuario, senha);
     const nomes = resumo.disciplinas.map((x) => x.titulo);
     setDados((d) => ({
       ...d,
@@ -223,6 +239,7 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
   );
 
   const definirPonte = useCallback((url: string) => setDados((d) => ({ ...d, ponte: url.trim() })), []);
+  const definirModoSigaa = useCallback((modo: 'nativo' | 'ponte') => setDados((d) => ({ ...d, modoSigaa: modo })), []);
 
   const avisosOrdenados = useMemo(
     () => [...dados.avisos].sort((a, b) => b.recebidoEm.localeCompare(a.recebidoEm)),
@@ -268,6 +285,22 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => a.data.localeCompare(b.data));
   }, [dados.sigaa, dados.manuais, dados.concluidas, avisosOrdenados]);
 
+  const alternarLembretes = useCallback(async (ligar: boolean) => {
+    if (ligar) {
+      if (!(await pedirPermissaoLembretes())) return false;
+    } else {
+      await cancelarLembretes();
+    }
+    setDados((d) => ({ ...d, lembretes: ligar }));
+    return true;
+  }, []);
+
+  // Mantém os lembretes do sistema iguais às atividades pendentes
+  useEffect(() => {
+    if (!lembretesDisponiveis || sessao === 'carregando' || sessao === 'anonimo') return;
+    if (dados.lembretes) void agendarLembretes(atividades);
+  }, [atividades, dados.lembretes, sessao]);
+
   const valor: Contexto = {
     ...dados,
     avisos: avisosOrdenados,
@@ -288,6 +321,8 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     registrarDia,
     corrigirGrupo,
     definirPonte,
+    definirModoSigaa,
+    alternarLembretes,
   };
 
   return <AstraContext.Provider value={valor}>{children}</AstraContext.Provider>;
