@@ -1,102 +1,43 @@
-import { useState } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { View } from 'react-native';
+import { router } from 'expo-router';
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 
-import Input from '../components/Input';
-import Button from '../components/Button';
-import { auth, db } from '../services/firebase';
+import { Botao, Cabecalho, Campo, Cartao, Chip, Mensagem, Tela, Txt } from '@/components/ui';
+import { auth, db } from '@/services/firebase';
 
-export interface OnboardingScreenProps {
-  style?: StyleProp<ViewStyle>;
-  testID?: string;
-}
+const METODOS = ['Digital', 'Papel', 'Híbrido'] as const;
+const CANAIS = ['SIGAA', 'Google Classroom', 'WhatsApp', 'Telegram', 'Discord'];
 
-export default function OnboardingScreen(props: OnboardingScreenProps) {
-  const router = useRouter();
-
-  // Estados dos campos de perfil acadêmico
+export default function Onboarding() {
   const [curso, setCurso] = useState('');
   const [periodo, setPeriodo] = useState('');
   const [metaHoras, setMetaHoras] = useState('');
-  const [metodoAnotacao, setMetodoAnotacao] = useState<'Digital' | 'Papel' | 'Híbrido'>('Digital');
-
-  // Canais de integração ativos
+  const [metodo, setMetodo] = useState<(typeof METODOS)[number]>('Digital');
   const [canais, setCanais] = useState<string[]>(['SIGAA']);
-
-  // Estados de feedback visual (Erros, Sucesso e Loading)
   const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  const toggleCanal = (nomeCanal: string) => {
-    if (canais.includes(nomeCanal)) {
-      setCanais(canais.filter((c) => c !== nomeCanal));
-    } else {
-      setCanais([...canais, nomeCanal]);
-    }
-  };
+  const alternarCanal = (c: string) =>
+    setCanais((atual) => (atual.includes(c) ? atual.filter((x) => x !== c) : [...atual, c]));
 
-  const handleSalvarPerfil = async () => {
+  async function salvar() {
+    if (!curso.trim()) return setErro('Informe seu curso.');
+    if (!periodo.trim()) return setErro('Informe o período atual (ex.: 3º).');
+    const meta = Number(metaHoras.replace(',', '.'));
+    if (!metaHoras.trim() || isNaN(meta) || meta <= 0) return setErro('Informe uma meta diária de estudo em horas.');
+    if (canais.length === 0) return setErro('Escolha pelo menos uma fonte.');
+
+    const usuario = auth.currentUser;
+    if (!usuario) return setErro('Não identificamos sua conta. Entre novamente.');
+
     setErro('');
-    setSucesso('');
-
-    // Validações defensivas
-    if (!curso.trim()) {
-      setErro('Por favor, informe seu curso de graduação.');
-      return;
-    }
-
-    if (!periodo.trim()) {
-      setErro('Informe o período letivo atual (ex: 3º Período).');
-      return;
-    }
-
-    if (!metaHoras.trim() || isNaN(Number(metaHoras)) || Number(metaHoras) <= 0) {
-      setErro('Informe uma meta diária válida de estudo em horas.');
-      return;
-    }
-
-    if (canais.length === 0) {
-      setErro('Selecione pelo menos um canal de integração.');
-      return;
-    }
-
-    const usuario = auth?.currentUser;
-
-    if (!usuario) {
-      setErro('Não foi possível identificar sua conta. Faça login novamente.');
-      return;
-    }
-
-    if (!db) {
-      setErro('O banco de dados não foi inicializado corretamente.');
-      return;
-    }
-
     setCarregando(true);
-
     try {
       const uid = usuario.uid;
-
-      const estudanteRef = doc(db, 'estudantes', uid);
-      const perfilRef = doc(db, 'perfisAprendizagem', uid);
-
-      const batch = writeBatch(db);
-
-      batch.set(
-        estudanteRef,
+      const lote = writeBatch(db);
+      lote.set(
+        doc(db, 'estudantes', uid),
         {
           id: uid,
           nome: usuario.displayName ?? 'Estudante',
@@ -105,265 +46,68 @@ export default function OnboardingScreen(props: OnboardingScreenProps) {
         },
         { merge: true }
       );
-
-      batch.set(
-        perfilRef,
+      lote.set(
+        doc(db, 'perfisAprendizagem', uid),
         {
           estudanteId: uid,
           curso: curso.trim(),
           periodo: periodo.trim(),
-          metaHoras: Number(metaHoras),
-          metodoAnotacao,
+          metaHoras: meta,
+          metodoAnotacao: metodo,
           canais: [...canais],
           dataIdentificacao: serverTimestamp(),
         },
         { merge: true }
       );
-
-      await batch.commit();
-
-      setSucesso('Perfil configurado com sucesso! Redirecionando...');
-      setTimeout(() => {
-        router.replace('/telainicial');
-      }, 1200);
-    } catch (error: any) {
-      console.error('Erro ao salvar perfil:', error);
+      await lote.commit();
+      router.replace('/inicio');
+    } catch {
       setErro('Não foi possível salvar seu perfil. Tente novamente.');
     } finally {
       setCarregando(false);
     }
-  };
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={[styles.root, props.style]}>
-          {/* Faixa do Topo (Header) igual ao Login */}
-          <View style={styles.header} />
+    <Tela>
+      <Cabecalho titulo="Vamos começar" subtitulo="Conte um pouco sobre sua rotina." />
 
-          <Text style={styles.tituloPrincipal}>Configuração Inicial</Text>
+      <Cartao style={{ gap: 16 }}>
+        <Campo rotulo="Curso" value={curso} onChangeText={setCurso} placeholder="Ex.: Sistemas de Informação" />
+        <Campo rotulo="Período atual" value={periodo} onChangeText={setPeriodo} placeholder="Ex.: 3º" />
+        <Campo
+          rotulo="Meta diária de estudo (horas)"
+          value={metaHoras}
+          onChangeText={setMetaHoras}
+          keyboardType="decimal-pad"
+          placeholder="Ex.: 3"
+        />
 
-          <Text style={styles.subtitulo}>
-            Personalize sua rotina no ASTRA para calibrar suas notificações e metas de estudo.
-          </Text>
-
-          {/* Feedbacks Visuais */}
-          {erro ? <Text style={styles.errorText}>{erro}</Text> : null}
-          {sucesso ? <Text style={styles.successText}>{sucesso}</Text> : null}
-
-          <View style={styles.formBox}>
-            {/* Campo: Curso */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Curso de Graduação *</Text>
-              <Input
-                placeholder="Ex: Bacharelado em BSI"
-                value={curso}
-                onChangeText={(text) => {
-                  setCurso(text);
-                  if (erro) setErro('');
-                }}
-              />
-            </View>
-
-            {/* Campo: Período */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Período Atual *</Text>
-              <Input
-                placeholder="Ex: 3º Período"
-                value={periodo}
-                onChangeText={(text) => {
-                  setPeriodo(text);
-                  if (erro) setErro('');
-                }}
-              />
-            </View>
-
-            {/* Campo: Meta de Horas */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Meta Diária de Estudos (horas) *</Text>
-              <Input
-                placeholder="Ex: 4"
-                keyboardType="numeric"
-                value={metaHoras}
-                onChangeText={(text) => {
-                  setMetaHoras(text);
-                  if (erro) setErro('');
-                }}
-              />
-            </View>
-
-            {/* Método de Anotação */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Método Principal de Anotação</Text>
-              <View style={styles.opcoesContainer}>
-                {(['Digital', 'Papel', 'Híbrido'] as const).map((opcao) => (
-                  <TouchableOpacity
-                    key={opcao}
-                    style={[
-                      styles.chip,
-                      metodoAnotacao === opcao && styles.chipSelecionado,
-                    ]}
-                    onPress={() => setMetodoAnotacao(opcao)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipTexto,
-                        metodoAnotacao === opcao && styles.chipTextoSelecionado,
-                      ]}
-                    >
-                      {opcao}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Canais de Integração */}
-            <View style={styles.field}>
-              <Text style={styles.label}>Canais Acadêmicos Utilizados *</Text>
-              <View style={styles.opcoesContainer}>
-                {['SIGAA', 'Google Classroom', 'WhatsApp', 'Discord'].map((canal) => {
-                  const selecionado = canais.includes(canal);
-                  return (
-                    <TouchableOpacity
-                      key={canal}
-                      style={[styles.chip, selecionado && styles.chipSelecionado]}
-                      onPress={() => toggleCanal(canal)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipTexto,
-                          selecionado && styles.chipTextoSelecionado,
-                        ]}
-                      >
-                        {canal}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Botão de Conclusão */}
-            <View style={styles.actionContainer}>
-              {carregando ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#1D2A44"
-                  style={{ marginVertical: 10 }}
-                />
-              ) : (
-                <Button title="Concluir e Ir para o Painel" onPress={handleSalvarPerfil} />
-              )}
-            </View>
+        <View style={{ gap: 8 }}>
+          <Txt v="legenda" cor="textSecondary" style={{ fontWeight: '700' }}>
+            Como você anota?
+          </Txt>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {METODOS.map((m) => (
+              <Chip key={m} rotulo={m} ativo={metodo === m} onPress={() => setMetodo(m)} />
+            ))}
           </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+        <View style={{ gap: 8 }}>
+          <Txt v="legenda" cor="textSecondary" style={{ fontWeight: '700' }}>
+            Onde chegam suas informações?
+          </Txt>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            {CANAIS.map((c) => (
+              <Chip key={c} rotulo={c} ativo={canais.includes(c)} onPress={() => alternarCanal(c)} />
+            ))}
+          </View>
+        </View>
+
+        {erro ? <Mensagem tom="erro" texto={erro} /> : null}
+        <Botao titulo="Concluir" onPress={salvar} carregando={carregando} />
+      </Cartao>
+    </Tela>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    width: '100%',
-    alignItems: 'center',
-  },
-  root: {
-    width: '100%',
-    flexGrow: 1,
-    paddingBottom: 70,
-    alignItems: 'center',
-    gap: 16,
-    backgroundColor: '#FDFFFF',
-  },
-  header: {
-    width: '100%',
-    height: 70,
-    backgroundColor: '#9AD9EB',
-  },
-  tituloPrincipal: {
-    color: '#000000',
-    fontSize: 25,
-    fontWeight: '600',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  subtitulo: {
-    color: '#333333',
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '400',
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-  formBox: {
-    width: '85%',
-    maxWidth: 380,
-    padding: 20,
-    gap: 14,
-    borderRadius: 12,
-    backgroundColor: '#E5F4F8',
-    borderWidth: 1,
-    borderColor: '#D4EBF3',
-  },
-  field: {
-    width: '100%',
-    gap: 6,
-  },
-  label: {
-    color: '#000000',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  opcoesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#B0D8E6',
-    backgroundColor: '#FDFFFF',
-  },
-  chipSelecionado: {
-    backgroundColor: '#9AD9EB',
-    borderColor: '#72C4DC',
-  },
-  chipTexto: {
-    fontSize: 13,
-    color: '#333333',
-    fontWeight: '500',
-  },
-  chipTextoSelecionado: {
-    color: '#000000',
-    fontWeight: '600',
-  },
-  actionContainer: {
-    marginTop: 8,
-  },
-  errorText: {
-    color: '#D32F2F',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  successText: {
-    color: '#2E7D32',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-});

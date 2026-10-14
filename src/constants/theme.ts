@@ -1,75 +1,62 @@
 import '@/global.css';
-import { Platform } from 'react-native';
 
+/**
+ * Tokens de cor do ASTRA. A marca é o azul-claro do logo (#9AD9EB);
+ * a cor de ação é um azul mais escuro para manter contraste de texto (WCAG AA).
+ */
 export const Colors = {
   light: {
-    primary: '#3873A0',
-    header: '#9AD9EB',
-    background: '#FDFFFF',
-    backgroundCard: '#E5F4F8',
-    cardBorder: '#D4EBF3',
-    inputBorder: '#9AD9EB',
-    text: '#1D2A44',
-    textSecondary: '#64748B',
-    textMuted: '#94A3B8',
-    link: '#0059FF',
-    error: '#D32F2F',
-    success: '#10B981',
-    warning: '#F59E0B',
-    white: '#FFFFFF',
-    borderLight: '#E2E8F0',
+    background: '#F5F8FA',
+    surface: '#FFFFFF',
+    surfaceAlt: '#EAF3F8',
+    border: '#E1E9EF',
+    text: '#14213D',
+    textSecondary: '#52627A',
+    textMuted: '#7A8798',
+    primary: '#2A6595',
+    onPrimary: '#FFFFFF',
+    brand: '#9AD9EB',
+    primarySoft: '#E1F0F8',
+    success: '#15803D',
+    successSoft: '#DCFCE7',
+    warning: '#B45309',
+    warningSoft: '#FEF3C7',
+    danger: '#B91C1C',
+    dangerSoft: '#FEE2E2',
   },
   dark: {
-    primary: '#6EA1C5',
-    header: '#2A4B7C',
-    background: '#0B132B',
-    backgroundCard: '#1C2541',
-    cardBorder: '#3A506B',
-    inputBorder: '#41689E',
-    text: '#FFFFFF',
-    textSecondary: '#C9F7FF',
-    textMuted: '#8A99AD',
-    link: '#9AD9EB',
-    error: '#EF4444',
-    success: '#10B981',
-    warning: '#F59E0B',
-    white: '#FFFFFF',
-    borderLight: '#2A4B7C',
+    background: '#0C1424',
+    surface: '#152036',
+    surfaceAlt: '#1C2B47',
+    border: '#26385A',
+    text: '#F1F5F9',
+    textSecondary: '#B4C2D6',
+    textMuted: '#8494AB',
+    primary: '#7DB8DE',
+    onPrimary: '#0C1424',
+    brand: '#9AD9EB',
+    primarySoft: '#1C3552',
+    success: '#4ADE80',
+    successSoft: '#12301F',
+    warning: '#FBBF24',
+    warningSoft: '#3A2A0B',
+    danger: '#F87171',
+    dangerSoft: '#3B1515',
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light;
-
-export const Fonts = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+export type ThemeColors = { [K in keyof typeof Colors.light]: string };
 
 export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const Radius = { sm: 8, md: 12, lg: 16, pill: 999 } as const;
+
+/** Largura máxima do conteúdo: em telas grandes o app fica centralizado, como no celular. */
+export const MaxContentWidth = 560;

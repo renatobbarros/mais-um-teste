@@ -63,3 +63,5 @@ src/services/firebase.ts
 
 #Configurações do Google/Firebase para o aplicativo Andorid
 google-services.json
+# Cópia compilada da sigaa-api (precisa ir para o repositório)
+!server/vendor/sigaa-api/dist/
