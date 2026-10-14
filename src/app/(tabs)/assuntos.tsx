@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Share, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Cabecalho, Cartao, Chip, Icone, Selo, SeloFonte, Tela, Txt, Vazio } from '@/components/ui';
+import { Botao, Cabecalho, Cartao, Chip, Icone, Selo, SeloFonte, Tela, Txt, Vazio } from '@/components/ui';
+import { montarExportacao } from '@/lib/exportacao';
 import { useAstra } from '@/lib/store';
 import type { Aviso, Grupo } from '@/lib/types';
 
@@ -34,6 +35,20 @@ export default function Assuntos() {
               {agrupamento.silhueta.toFixed(2).replace('.', ',')}
               {totalCorrecoes > 0 ? ` · ${totalCorrecoes} ${totalCorrecoes === 1 ? 'correção sua' : 'correções suas'}` : ''}
             </Txt>
+          ) : null}
+
+          {totalCorrecoes > 0 ? (
+            <Botao
+              titulo="Exportar minhas correções"
+              icone="share-outline"
+              variante="secundario"
+              onPress={() =>
+                Share.share({
+                  title: 'Correções de agrupamento do ASTRA',
+                  message: JSON.stringify(montarExportacao(agrupamento.grupos, correcoes), null, 2),
+                })
+              }
+            />
           ) : null}
 
           {agrupamento.grupos.map((g) => (

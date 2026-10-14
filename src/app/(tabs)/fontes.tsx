@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Switch, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 
 import {
   Botao,
@@ -17,13 +18,15 @@ import {
 } from '@/components/ui';
 import { haQuanto } from '@/lib/datas';
 import { useAstra } from '@/lib/store';
+import { useTheme } from '@/hooks/use-theme';
+import { cofreDisponivel } from '@/lib/cofre';
 import { sigaaNativoDisponivel } from '@/lib/sigaaNativo';
 import type { FonteId } from '@/lib/types';
 
 const FONTES_MENSAGEM: FonteId[] = ['whatsapp', 'telegram', 'classroom', 'discord', 'email'];
 
 export default function Fontes() {
-  const { sessao, sigaa, sigaaEm, conectarSigaa, desconectarSigaa, avisos, importarMensagens, removerAvisosDaFonte, ponte, definirPonte, modoSigaa, definirModoSigaa } =
+  const { sessao, sigaa, sigaaEm, lembrarSenha, sincronizando, erroSync, conectarSigaa, desconectarSigaa, avisos, importarMensagens, removerAvisosDaFonte, ponte, definirPonte, modoSigaa, definirModoSigaa } =
     useAstra();
 
   return (
@@ -40,6 +43,9 @@ export default function Fontes() {
           onPonte={definirPonte}
           modo={modoSigaa}
           onModo={definirModoSigaa}
+          lembrada={lembrarSenha}
+          sincronizando={sincronizando}
+          erroSync={erroSync}
           onConectar={conectarSigaa}
           onDesconectar={desconectarSigaa}
         />
@@ -65,6 +71,9 @@ function CartaoSigaa({
   onPonte,
   modo,
   onModo,
+  lembrada,
+  sincronizando,
+  erroSync,
   onConectar,
   onDesconectar,
 }: {
@@ -76,7 +85,10 @@ function CartaoSigaa({
   onPonte: (url: string) => void;
   modo: 'nativo' | 'ponte';
   onModo: (m: 'nativo' | 'ponte') => void;
-  onConectar: (usuario: string, senha: string) => Promise<void>;
+  lembrada: boolean;
+  sincronizando: boolean;
+  erroSync: string;
+  onConectar: (usuario: string, senha: string, lembrar?: boolean) => Promise<void>;
   onDesconectar: () => void;
 }) {
   const [usuario, setUsuario] = useState('');
@@ -85,13 +97,15 @@ function CartaoSigaa({
   const [erro, setErro] = useState('');
   const [avancado, setAvancado] = useState(false);
   const usaNativo = sigaaNativoDisponivel && modo === 'nativo';
+  const [lembrar, setLembrar] = useState(lembrada);
+  const t = useTheme();
 
   async function conectar() {
     setErro('');
     if (!usuario.trim() || !senha) return setErro('Informe usuário e senha do SIGAA.');
     setCarregando(true);
     try {
-      await onConectar(usuario.trim(), senha);
+      await onConectar(usuario.trim(), senha, lembrar);
       setSenha('');
     } catch (e) {
       setErro((e as Error).message);
@@ -143,6 +157,34 @@ function CartaoSigaa({
               ? 'A senha vai direto do seu celular para o SIGAA e não fica salva.'
               : 'A senha passa pela ponte só para ler seus dados e não fica salva.'}
           </Txt>
+          {cofreDisponivel ? (
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Txt v="corpo" style={{ flex: 1, fontWeight: '600' }}>
+                  Lembrar neste aparelho
+                </Txt>
+                <Switch
+                  value={lembrar}
+                  onValueChange={setLembrar}
+                  accessibilityLabel="Lembrar usuário e senha do SIGAA neste aparelho"
+                  trackColor={{ true: t.primary, false: t.border }}
+                />
+              </View>
+              <Txt v="legenda" cor="textMuted">
+                Guarda usuário e senha no cofre seguro do celular, criptografados, para atualizar o SIGAA sozinho a cada
+                6 horas. Desligue e conecte de novo, ou desconecte, para apagar.
+              </Txt>
+            </View>
+          ) : null}
+          {lembrada ? (
+            <Txt v="legenda" cor={erroSync ? 'danger' : 'success'} style={{ fontWeight: '600' }}>
+              {sincronizando
+                ? 'Atualizando o SIGAA...'
+                : erroSync
+                  ? `Atualização automática falhou: ${erroSync}`
+                  : 'Atualização automática ligada.'}
+            </Txt>
+          ) : null}
           {erro ? <Mensagem tom="erro" texto={erro} /> : null}
           <Botao
             titulo={conectado ? 'Atualizar dados' : 'Conectar'}
@@ -195,6 +237,17 @@ function CartaoImportar({
   const [texto, setTexto] = useState('');
   const [resultado, setResultado] = useState('');
 
+  async function colar() {
+    try {
+      const copiado = await Clipboard.getStringAsync();
+      if (!copiado.trim()) return setResultado('A área de transferência está vazia.');
+      setTexto(copiado);
+      setResultado('');
+    } catch {
+      setResultado('Não consegui ler a área de transferência.');
+    }
+  }
+
   function importar() {
     if (texto.trim().length < 8) return setResultado('Cole pelo menos uma mensagem.');
     const n = onImportar(texto, fonte);
@@ -219,6 +272,7 @@ function CartaoImportar({
         placeholder="Cole aqui. A exportação de conversa do WhatsApp também funciona."
       />
       {resultado ? <Mensagem tom={resultado.includes('importad') ? 'sucesso' : 'erro'} texto={resultado} /> : null}
+      <Botao titulo="Colar da área de transferência" icone="clipboard-outline" variante="secundario" onPress={colar} />
       <Botao titulo="Importar mensagens" icone="download-outline" onPress={importar} />
       {total > 0 ? (
         <Botao titulo={`Remover ${total} de ${FONTES[fonte].nome}`} variante="perigo" onPress={() => onLimpar(fonte)} />

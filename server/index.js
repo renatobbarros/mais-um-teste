@@ -18,6 +18,7 @@ const PORT = Number(process.env.PORT) || 3333;
 const MOCK = process.env.SIGAA_MOCK === '1';
 const SIGAA_URL = process.env.SIGAA_URL || 'https://sigs.ufrpe.br';
 const ORIGEM_PERMITIDA = process.env.ALLOWED_ORIGIN || '*';
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const LIMITE_CORPO = 10 * 1024; // 10 KB
 const JANELA_MS = 60 * 1000;
 const MAX_TENTATIVAS = 5;
@@ -82,7 +83,9 @@ const servidor = http.createServer(async (req, res) => {
     return responder(res, 404, { erro: 'Rota não encontrada.' });
   }
 
-  const ip = req.socket.remoteAddress || 'desconhecido';
+  // Atrás de um proxy (Render, Fly, etc.) o IP real vem no cabeçalho X-Forwarded-For
+  const encaminhado = TRUST_PROXY ? String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() : '';
+  const ip = encaminhado || req.socket.remoteAddress || 'desconhecido';
   if (!limitarTaxa(ip)) {
     return responder(res, 429, { erro: 'Muitas tentativas. Aguarde um minuto.' });
   }
@@ -105,6 +108,10 @@ const servidor = http.createServer(async (req, res) => {
     });
   }
 });
+
+if (process.env.NODE_ENV === 'production' && ORIGEM_PERMITIDA === '*') {
+  console.warn('Aviso: defina ALLOWED_ORIGIN com o endereço do app web para limitar quem pode usar a ponte.');
+}
 
 servidor.listen(PORT, () => {
   console.log(`Ponte ASTRA-SIGAA em http://localhost:${PORT} (${MOCK ? 'demonstração' : 'SIGAA real'})`);

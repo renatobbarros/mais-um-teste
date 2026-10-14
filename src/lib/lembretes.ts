@@ -5,8 +5,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
-import { calcularLembretes } from './lembretesLogica';
-import type { Atividade } from './types';
+import type { Lembrete } from './lembretesLogica';
 
 export const lembretesDisponiveis = true;
 
@@ -53,12 +52,11 @@ export async function cancelarLembretes(): Promise<void> {
   }
 }
 
-/** Troca os lembretes agendados pelos das atividades pendentes. Devolve quantos foram agendados. */
-export async function agendarLembretes(atividades: Atividade[]): Promise<number> {
+/** Troca as notificações agendadas pela lista recebida. Devolve quantas foram agendadas. */
+export async function agendarLembretes(lembretes: Lembrete[]): Promise<number> {
   try {
     await prepararCanal();
     await Notifications.cancelAllScheduledNotificationsAsync();
-    const lembretes = calcularLembretes(atividades);
     for (const l of lembretes) {
       await Notifications.scheduleNotificationAsync({
         content: { title: l.titulo, body: l.corpo },

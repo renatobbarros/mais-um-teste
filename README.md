@@ -31,7 +31,9 @@ Facilitar o acompanhamento da rotina acadêmica por meio da centralização e or
 - ✨ **Assuntos**: agrupamento automático das mensagens por tema (TF-IDF + K-Means, k pela silhueta), com correção feita pelo estudante;
 - 🔗 **Fontes**: conexão com o SIGAA da UFRPE (direto no celular) e importação de mensagens do WhatsApp, Telegram, Classroom e Discord;
 - 📖 **Diário** de sono, estudo e estresse, e tela de **Desempenho** com IRA, histórico, pontos de atenção e médias da rotina;
-- 🔔 Lembretes de prazo no celular;
+- 🔔 Lembretes de prazo e resumo diário das 7h30 no celular;
+- 🔄 Atualização automática do SIGAA a cada 6 horas (opcional, com a senha no cofre seguro do celular);
+- 📋 Colar mensagens da área de transferência e exportar as correções de assuntos;
 - 🌗 Tema claro e escuro automático.
 
 O que ainda falta em relação ao artigo está em [docs/ALINHAMENTO-ARTIGO.md](docs/ALINHAMENTO-ARTIGO.md).
@@ -105,9 +107,41 @@ Em produção, coloque a ponte atrás de HTTPS, já que ela recebe a senha do SI
 
 > **Como funciona no celular:** a pasta `vendor/sigaa-api` é uma cópia compilada da biblioteca. O arquivo `dist/session/sigaa-http.native.js` troca a camada HTTP do Node por `expo/fetch`, e o `metro.config.js` aponta os módulos do Node que faltam para arquivos vazios. Para atualizar a biblioteca, rode `npm run build` na `sigaa-api-UFRPE`, copie a pasta `dist` para `vendor/sigaa-api` e rode `npm install` de novo em `server/`.
 
-### 🔔 Lembretes
+### 🔔 Lembretes e resumo diário
 
-Em **Perfil**, o estudante liga os lembretes de prazo. O app avisa 1 dia e 2 horas antes de cada atividade pendente, com notificações locais (sem servidor). Funciona só no celular.
+Em **Perfil**, o estudante liga:
+- **Lembretes de prazo:** avisos 1 dia e 2 horas antes de cada atividade pendente;
+- **Resumo diário:** às 7h30, uma notificação com os prazos do dia (só nos dias que têm prazo).
+
+São notificações locais, sem servidor, e funcionam só no celular. O app pede a permissão ao ligar.
+
+### 🔄 Atualização automática do SIGAA
+
+Em **Fontes**, o estudante pode ligar **Lembrar neste aparelho**. Usuário e senha ficam no cofre seguro do celular (Keychain no iOS, Keystore no Android) e o app atualiza o SIGAA sozinho ao abrir, se passaram 6 horas desde a última leitura. Desconectar o SIGAA ou sair da conta apaga a senha do cofre. No navegador a senha nunca é guardada.
+
+### 📋 Importar mensagens
+
+Em **Fontes > Mensagens**, o botão **Colar da área de transferência** traz o texto copiado de uma conversa. A exportação de conversa do WhatsApp também é entendida.
+
+### 🌐 Hospedar a ponte (navegador)
+
+A ponte precisa de HTTPS porque recebe a senha do SIGAA. Há dois arquivos prontos:
+
+- `Dockerfile.ponte`: `docker build -f Dockerfile.ponte -t astra-ponte .` e `docker run -p 3333:3333 -e ALLOWED_ORIGIN=https://seu-app -e TRUST_PROXY=1 astra-ponte`;
+- `render.yaml`: no [Render](https://render.com), crie um **Blueprint** apontando para este repositório. O HTTPS vem de graça. Preencha `ALLOWED_ORIGIN` com o endereço do app web.
+
+Variáveis da ponte: `ALLOWED_ORIGIN` (quem pode chamar), `TRUST_PROXY=1` (atrás de proxy, para o limite de 5 tentativas por minuto contar o IP real), `PORT`.
+
+### 🧪 Testes
+
+```bash
+npm test                 # 80 testes da lógica do app (datas, mensagens, IA, lembretes, contraste)
+cd server && npm test    # 4 testes da camada HTTP do celular contra um SIGAA falso
+npx tsc --noEmit         # tipos
+npx eslint src           # estilo
+```
+
+Fluxos ponta a ponta para celular (Maestro) estão em `.maestro/`. Com o app instalado e o [Maestro](https://maestro.mobile.dev) no computador: `maestro test .maestro`.
 
 ### 📱 Android
 Para executar em um dispositivo Andorid com o ambiente nativo configurado:
