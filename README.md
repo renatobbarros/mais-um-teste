@@ -29,8 +29,9 @@ Facilitar o acompanhamento da rotina acadêmica por meio da centralização e or
 - 📅 **Agenda**: prazos e avaliações de todas as fontes, com conclusão de tarefas e tarefas manuais;
 - 🔔 **Avisos**: mensagens sem repetição, com filtro por prazos, avisos e materiais;
 - ✨ **Assuntos**: agrupamento automático das mensagens por tema (TF-IDF + K-Means, k pela silhueta), com correção feita pelo estudante;
-- 🔗 **Fontes**: conexão com o SIGAA da UFRPE e importação de mensagens do WhatsApp, Telegram, Classroom e Discord;
+- 🔗 **Fontes**: conexão com o SIGAA da UFRPE (direto no celular) e importação de mensagens do WhatsApp, Telegram, Classroom e Discord;
 - 📖 **Diário** de sono, estudo e estresse, e tela de **Desempenho** com IRA, histórico, pontos de atenção e médias da rotina;
+- 🔔 Lembretes de prazo no celular;
 - 🌗 Tema claro e escuro automático.
 
 O que ainda falta em relação ao artigo está em [docs/ALINHAMENTO-ARTIGO.md](docs/ALINHAMENTO-ARTIGO.md).
@@ -79,30 +80,34 @@ npx expo start
 
 Para ver o app sem conta, use **Explorar com dados de exemplo** na tela de login.
 
-### 🏛️ Ponte com o SIGAA
+### 🏛️ SIGAA
 
-O app não fala direto com o SIGAA. Um pequeno servidor (pasta `server/`) usa a [sigaa-api-UFRPE](https://github.com/renatobbarros/sigaa-api-UFRPE) para ler os dados e entregá-los ao app.
+- **No celular (Android e iOS):** a biblioteca [sigaa-api-UFRPE](https://github.com/renatobbarros/sigaa-api-UFRPE) roda **dentro do app**, sem servidor. A senha vai direto do celular para o SIGAA e não fica salva. Basta informar usuário e senha na aba **Fontes**.
+- **No navegador:** o SIGAA bloqueia chamadas diretas (CORS), então é preciso a **ponte**, um servidor pequeno na pasta `server/`.
 
 ```bash
 cd server
 npm install
 npm start          # SIGAA real
 npm run mock       # dados de demonstração, sem usuário nem senha
+npm test           # testa a camada HTTP do celular contra um SIGAA falso
 ```
 
-Depois, na aba **Fontes**, informe usuário e senha do SIGAA. A senha é usada só naquele momento e não fica salva.
-
-Endereço da ponte, conforme onde o app roda:
+Na aba **Fontes > Avançado** dá para trocar entre "Direto no celular" e "Pela ponte". Endereço da ponte:
 
 | Onde o app roda | Endereço |
 | --- | --- |
 | Navegador e iOS Simulator | `http://localhost:3333` (padrão) |
 | Emulador Android | `http://10.0.2.2:3333` (padrão) |
-| Celular físico | IP do computador, ex.: `http://192.168.0.10:3333`, em **Fontes > Avançado** |
+| Celular físico | IP do computador, ex.: `http://192.168.0.10:3333` |
 
 Em produção, coloque a ponte atrás de HTTPS, já que ela recebe a senha do SIGAA.
 
-> A pasta `server/vendor/sigaa-api` é uma cópia compilada da biblioteca. Para atualizá-la, rode `npm run build` na `sigaa-api-UFRPE` e copie a pasta `dist` para lá.
+> **Como funciona no celular:** a pasta `vendor/sigaa-api` é uma cópia compilada da biblioteca. O arquivo `dist/session/sigaa-http.native.js` troca a camada HTTP do Node por `expo/fetch`, e o `metro.config.js` aponta os módulos do Node que faltam para arquivos vazios. Para atualizar a biblioteca, rode `npm run build` na `sigaa-api-UFRPE`, copie a pasta `dist` para `vendor/sigaa-api` e rode `npm install` de novo em `server/`.
+
+### 🔔 Lembretes
+
+Em **Perfil**, o estudante liga os lembretes de prazo. O app avisa 1 dia e 2 horas antes de cada atividade pendente, com notificações locais (sem servidor). Funciona só no celular.
 
 ### 📱 Android
 Para executar em um dispositivo Andorid com o ambiente nativo configurado:

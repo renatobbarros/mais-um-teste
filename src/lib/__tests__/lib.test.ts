@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import { alertasRotina, mediasRotina, pontosDeAtencao } from '../analise';
 import { chaveDia, diasAte, lerDataHora, rotuloDia, rotuloPrazo } from '../datas';
 import { avisosDemo } from '../demo';
+import { calcularLembretes, LIMITE_LEMBRETES } from '../lembretesLogica';
+import type { Atividade } from '../types';
 import { agruparAvisos, agruparRepetidos, silhueta, tfidf, tokenizar } from '../ml';
 import { criarAvisos, detectarDisciplina, detectarTipo, extrairPrazo, separarMensagens } from '../parse';
 
@@ -236,5 +238,53 @@ describe('desempenho e rotina', () => {
       { periodo: '2026.1', codigo: 'D', titulo: 'D', mediaFinal: null, faltas: null, situacao: 'REPROVADO' },
     ]);
     assert.deepEqual(pontos.map((p) => p.codigo), ['A', 'B', 'D']);
+  });
+});
+
+describe('lembretes', () => {
+  const atividade = (id: string, quando: Date, extra: Partial<Atividade> = {}): Atividade => ({
+    id,
+    titulo: `Tarefa ${id}`,
+    data: quando.toISOString(),
+    fonte: 'manual',
+    tipo: 'tarefa',
+    concluida: false,
+    ...extra,
+  });
+
+  it('agenda um dia antes e duas horas antes', () => {
+    const l = calcularLembretes([atividade('a', new Date(2026, 9, 20, 18, 0))], BASE);
+    assert.equal(l.length, 2);
+    assert.equal(l[0].id, 'a:dia');
+    assert.equal(l[0].quando.getTime(), new Date(2026, 9, 19, 18, 0).getTime());
+    assert.equal(l[1].id, 'a:horas');
+    assert.equal(l[1].quando.getHours(), 16);
+  });
+
+  it('não agenda o que já passou', () => {
+    // Prazo em 5 horas: o aviso de um dia antes já passou, o de 2 horas ainda não
+    const l = calcularLembretes([atividade('a', new Date(2026, 9, 14, 17, 0))], BASE);
+    assert.deepEqual(l.map((x) => x.id), ['a:horas']);
+    assert.equal(calcularLembretes([atividade('b', new Date(2026, 9, 14, 13, 0))], BASE).length, 0);
+  });
+
+  it('ignora atividades concluídas e datas inválidas', () => {
+    const futuro = new Date(2026, 9, 30);
+    assert.equal(calcularLembretes([atividade('a', futuro, { concluida: true })], BASE).length, 0);
+    assert.equal(calcularLembretes([{ ...atividade('b', futuro), data: 'lixo' }], BASE).length, 0);
+  });
+
+  it('ordena por horário e respeita o limite do iOS', () => {
+    const muitas = Array.from({ length: 100 }, (_, i) => atividade(String(i), new Date(2026, 10, 1 + (i % 28), 10 + (i % 8))));
+    const l = calcularLembretes(muitas, BASE);
+    assert.equal(l.length, LIMITE_LEMBRETES);
+    for (let i = 1; i < l.length; i++) assert.ok(l[i].quando >= l[i - 1].quando);
+  });
+
+  it('inclui disciplina e horário no texto', () => {
+    const [l] = calcularLembretes([atividade('a', new Date(2026, 9, 20, 18, 30), { disciplina: 'Banco de Dados' })], BASE);
+    assert.ok(l.corpo.includes('Banco de Dados'));
+    assert.ok(l.corpo.includes('18h30'));
+    assert.ok(l.titulo.includes('Tarefa a'));
   });
 });

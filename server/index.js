@@ -12,6 +12,7 @@
  */
 const http = require('http');
 const resumoDemo = require('./mock');
+const { ehErroDeCredencial } = require('sigaa-api/resumo');
 
 const PORT = Number(process.env.PORT) || 3333;
 const MOCK = process.env.SIGAA_MOCK === '1';
@@ -66,65 +67,10 @@ function lerCorpo(req) {
   });
 }
 
-const tipoAtividade = { homework: 'tarefa', quiz: 'questionario', exam: 'avaliacao' };
-
-function tituloAtividade(a) {
-  if (a.type === 'homework') return a.homeworkTitle;
-  if (a.type === 'quiz') return a.quizTitle;
-  return a.examDescription;
-}
-
-// Cada seção roda isolada: se uma falhar, as outras continuam.
-async function seguro(fn, padrao) {
-  try {
-    return await fn();
-  } catch {
-    return padrao;
-  }
-}
-
 async function buscarNoSigaa(usuario, senha) {
   const { Sigaa } = require('sigaa-api');
-  const sigaa = new Sigaa({ url: SIGAA_URL, institution: 'UFRPE' });
-  const conta = await sigaa.login(usuario, senha);
-  try {
-    const ativos = await conta.getActiveBonds();
-    const inativos = await conta.getInactiveBonds();
-    const vinculo = [...ativos, ...inativos].find((v) => v.type === 'student');
-    if (!vinculo) throw new Error('Nenhum vínculo de discente encontrado.');
-
-    const atividadesBrutas = await seguro(() => vinculo.getActivities(), []);
-    const indices = await seguro(() => vinculo.getAcademicIndices(), []);
-    const turmas = await seguro(() => vinculo.getCourses(), []);
-    const historico = await seguro(() => vinculo.getGradesHistory(), []);
-
-    return {
-      demo: false,
-      aluno: { matricula: vinculo.registration, curso: vinculo.program },
-      indices: indices.map((i) => ({ code: i.code, name: i.name, value: i.value })),
-      atividades: atividadesBrutas
-        .map((a, i) => ({
-          id: `sigaa-${i}-${a.date.getTime()}`,
-          tipo: tipoAtividade[a.type] || 'tarefa',
-          titulo: tituloAtividade(a),
-          disciplina: a.courseTitle,
-          data: a.date.toISOString(),
-          concluida: Boolean(a.done),
-        }))
-        .sort((a, b) => a.data.localeCompare(b.data)),
-      disciplinas: turmas.map((t) => ({ codigo: t.code, titulo: t.title, periodo: t.period })),
-      historico: historico.map((h) => ({
-        periodo: h.period,
-        codigo: h.code,
-        titulo: h.title,
-        mediaFinal: h.finalGrade ?? null,
-        faltas: h.absences ?? null,
-        situacao: h.situation ?? '',
-      })),
-    };
-  } finally {
-    await conta.logoff().catch(() => {});
-  }
+  const { buscarResumo } = require('sigaa-api/resumo');
+  return buscarResumo(Sigaa, { url: SIGAA_URL, usuario, senha });
 }
 
 const servidor = http.createServer(async (req, res) => {
@@ -151,8 +97,7 @@ const servidor = http.createServer(async (req, res) => {
     const resumo = await buscarNoSigaa(usuario.trim(), senha);
     return responder(res, 200, resumo);
   } catch (erro) {
-    const msg = String((erro && erro.message) || '');
-    const credenciais = /usu[aá]rio|senha|login|credenc/i.test(msg);
+    const credenciais = ehErroDeCredencial(erro);
     return responder(res, credenciais ? 401 : 502, {
       erro: credenciais
         ? 'Usuário ou senha do SIGAA incorretos.'
