@@ -41,7 +41,7 @@ export default function Desempenho() {
       {sigaa && sigaa.indices.length > 0 ? (
         <View style={{ flexDirection: 'row', gap: 12 }}>
           {sigaa.indices.slice(0, 2).map((i) => (
-            <Cartao key={i.code} style={{ flex: 1 }}>
+            <Cartao key={`${i.code}-${i.name}`} style={{ flex: 1 }}>
               <Txt v="rotulo" cor="textMuted">
                 {i.code}
               </Txt>
@@ -57,7 +57,7 @@ export default function Desempenho() {
       {atencao.length > 0 ? (
         <Secao titulo="Pontos de atenção">
           {atencao.map((p) => (
-            <Cartao key={p.codigo}>
+            <Cartao key={p.id}>
               <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
                 <Icone nome="alert-circle-outline" tamanho={22} cor="warning" />
                 <View style={{ flex: 1 }}>
@@ -100,8 +100,8 @@ export default function Desempenho() {
 
       {[...porPeriodo.entries()].map(([periodo, itens]) => (
         <Secao key={periodo} titulo={`Período ${periodo}`}>
-          {itens.map((h) => (
-            <Cartao key={h.codigo}>
+          {itens.map((h, i) => (
+            <Cartao key={`${h.codigo}-${i}`}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
                 <Txt v="subtitulo" style={{ flex: 1 }}>
                   {h.titulo}

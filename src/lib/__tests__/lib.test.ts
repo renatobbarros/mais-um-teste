@@ -239,6 +239,16 @@ describe('desempenho e rotina', () => {
     ]);
     assert.deepEqual(pontos.map((p) => p.codigo), ['A', 'B', 'D']);
   });
+
+  it('a mesma disciplina reprovada em dois períodos gera pontos com ids diferentes', () => {
+    const pontos = pontosDeAtencao([
+      { periodo: '2025.1', codigo: 'X', titulo: 'Cálculo', mediaFinal: 3, faltas: 0, situacao: 'REPROVADO' },
+      { periodo: '2025.2', codigo: 'X', titulo: 'Cálculo', mediaFinal: 4, faltas: 0, situacao: 'REPROVADO' },
+    ]);
+    assert.equal(pontos.length, 2);
+    assert.notEqual(pontos[0].id, pontos[1].id);
+    assert.match(pontos[0].motivo, /período 2025\.1/);
+  });
 });
 
 describe('lembretes', () => {

@@ -35,19 +35,30 @@ export function alertasRotina(m: MediasRotina | null): string[] {
 }
 
 export interface PontoAtencao {
+  /** Único na lista: a mesma disciplina pode aparecer em mais de um período. */
+  id: string;
   codigo: string;
+  periodo: string;
   titulo: string;
   motivo: string;
 }
 
 export function pontosDeAtencao(historico: HistoricoDisciplina[]): PontoAtencao[] {
   const pontos: PontoAtencao[] = [];
-  historico.forEach((h) => {
+  historico.forEach((h, i) => {
     const motivos: string[] = [];
     if (h.mediaFinal !== null && h.mediaFinal < 6) motivos.push(`média ${fmt(h.mediaFinal)}`);
     if (h.faltas !== null && h.faltas >= 10) motivos.push(`${h.faltas} faltas`);
     if (/reprov/i.test(h.situacao)) motivos.push('reprovada');
-    if (motivos.length > 0) pontos.push({ codigo: h.codigo, titulo: h.titulo, motivo: motivos.join(' · ') });
+    if (motivos.length > 0) {
+      pontos.push({
+        id: `${h.periodo}|${h.codigo}|${i}`,
+        codigo: h.codigo,
+        periodo: h.periodo,
+        titulo: h.titulo,
+        motivo: [h.periodo ? `período ${h.periodo}` : '', ...motivos].filter(Boolean).join(' · '),
+      });
+    }
   });
   return pontos;
 }
