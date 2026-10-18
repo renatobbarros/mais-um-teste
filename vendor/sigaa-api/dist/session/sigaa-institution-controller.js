@@ -16,7 +16,7 @@ class SigaaInstitutionController {
     _defineProperty(this, "url", void 0);
 
     this.institution = institution;
-    this.url = new URL(url);
+    this.url = new (require("url").URL)(url);
   }
 
 }

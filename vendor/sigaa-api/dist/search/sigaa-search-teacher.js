@@ -58,7 +58,7 @@ class SigaaSearchTeacher {
     const formElement = page.$('form[name="form"]');
     const action = formElement.attr('action');
     if (!action) throw new Error('SIGAA: Form with action at teacher search page.');
-    const url = new URL(action, page.url);
+    const url = new (require("url").URL)(action, page.url);
     const postValues = {};
     const inputs = formElement.find("input[name]:not([type='submit'])").toArray();
 
@@ -82,8 +82,8 @@ class SigaaSearchTeacher {
       const department = this.parser.removeTagsHtml(page.$(rowElement).find('span.departamento').html());
       const pageHREF = this.parser.removeTagsHtml(page.$(rowElement).find('span.pagina > a').attr('href'));
       const photoHREF = this.parser.removeTagsHtml(page.$(rowElement).find('img').attr('src'));
-      const pageURL = new URL(pageHREF, page.url);
-      const photoURL = photoHREF.includes('no_picture.png') ? undefined : new URL(photoHREF, page.url);
+      const pageURL = new (require("url").URL)(pageHREF, page.url);
+      const photoURL = photoHREF.includes('no_picture.png') ? undefined : new (require("url").URL)(photoHREF, page.url);
       results.push(new _sigaaSearchTeacherResult.SigaaSearchTeacherResult(this.http, this.parser, {
         name,
         department,

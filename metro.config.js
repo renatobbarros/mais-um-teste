@@ -5,6 +5,7 @@ const config = getDefaultConfig(__dirname);
 
 const vazio = path.join(__dirname, 'src/sigaa-shims/vazio.js');
 const registro = path.join(__dirname, 'src/sigaa-shims/registro.js');
+const url = path.join(__dirname, 'src/sigaa-shims/url.js');
 
 // Módulos do Node usados pela sigaa-api (vendor/sigaa-api) que não existem no celular.
 // Só valem para arquivos da própria biblioteca; o resto do app resolve normalmente.
@@ -17,6 +18,8 @@ const SUBSTITUTOS = {
   stream: vazio,
   'iconv-lite': vazio,
   'formdata-node': vazio,
+  // O pacote `url` do npm não tem `URL`; o shim traz um URL que resolve endereços relativos
+  url,
 };
 
 const pastaDaApi = path.join(__dirname, 'vendor', 'sigaa-api') + path.sep;

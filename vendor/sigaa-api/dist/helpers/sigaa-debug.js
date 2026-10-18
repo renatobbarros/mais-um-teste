@@ -24,7 +24,8 @@ function _interopRequireWildcard(obj, nodeInterop) { if (!nodeInterop && obj && 
  * @category Internal
  */
 function saveDebugPage(name, page) {
-  const debugDir = process.env.SIGAA_DEBUG_DIR;
+  // No celular não há `process.env` de verdade: sem pasta de depuração, não grava nada
+  const debugDir = typeof process !== 'undefined' && process.env ? process.env.SIGAA_DEBUG_DIR : undefined;
   if (!debugDir) return;
 
   try {

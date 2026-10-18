@@ -57,7 +57,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --import tsx --test src/lib/__tests__/lib.test.ts src/lib/__tests__/melhorias.test.ts src/lib/__tests__/crud.test.ts src/lib/__tests__/previsao.test.ts src/lib/__tests__/facilidades.test.ts"
+    "test": "node --import tsx --test src/lib/__tests__/lib.test.ts src/lib/__tests__/melhorias.test.ts src/lib/__tests__/crud.test.ts src/lib/__tests__/previsao.test.ts src/lib/__tests__/facilidades.test.ts src/lib/__tests__/urlSigaa.test.ts"
   },
   "private": true
 }
