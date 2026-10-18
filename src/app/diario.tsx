@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Botao, Cabecalho, Cartao, Chip, Mensagem, Secao, Tela, Txt } from '@/components/ui';
@@ -19,7 +19,7 @@ export default function Diario() {
 }
 
 function Formulario({ hoje }: { hoje?: RegistroDiario }) {
-  const { diario, registrarDia } = useAstra();
+  const { diario, registrarDia, removerRegistroDiario } = useAstra();
   const [sono, setSono] = useState(hoje?.sonoHoras ?? 7);
   const [estudo, setEstudo] = useState(hoje?.estudoHoras ?? 2);
   const [estresse, setEstresse] = useState(hoje?.estresse ?? 3);
@@ -56,6 +56,39 @@ function Formulario({ hoje }: { hoje?: RegistroDiario }) {
           <Cartao>
             <Grafico diario={diario.slice(-7)} />
           </Cartao>
+        </Secao>
+      ) : null}
+
+      {diario.length > 0 ? (
+        <Secao titulo="Registros">
+          {[...diario].reverse().map((r) => (
+            <Cartao key={r.dia}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Txt style={{ fontWeight: '700' }}>{r.dia}</Txt>
+                  <Txt v="legenda" cor="textSecondary">
+                    Sono {fmt(r.sonoHoras)} h · Estudo {fmt(r.estudoHoras)} h · Estresse {r.estresse}/5
+                  </Txt>
+                </View>
+                <Pressable
+                  onPress={() =>
+                    Alert.alert('Excluir registro?', `O registro de ${r.dia} será apagado.`, [
+                      { text: 'Cancelar', style: 'cancel' },
+                      { text: 'Excluir', style: 'destructive', onPress: () => removerRegistroDiario(r.dia) },
+                    ])
+                  }
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Excluir registro de ${r.dia}`}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
+                >
+                  <Txt v="legenda" cor="danger" style={{ fontWeight: '700' }}>
+                    Excluir
+                  </Txt>
+                </Pressable>
+              </View>
+            </Cartao>
+          ))}
         </Secao>
       ) : null}
     </Tela>

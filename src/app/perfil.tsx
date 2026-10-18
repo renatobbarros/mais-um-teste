@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Switch, View } from 'react-native';
+import { Alert, Switch, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { signOut, updateProfile, verifyBeforeUpdateEmail } from 'firebase/auth';
-import { doc, getDoc, writeBatch } from 'firebase/firestore';
+import { deleteUser, signOut, updateProfile, verifyBeforeUpdateEmail } from 'firebase/auth';
+import { deleteDoc, doc, getDoc, writeBatch } from 'firebase/firestore';
 
 import { Botao, Cabecalho, Campo, Cartao, Mensagem, Selo, Tela, Txt } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
@@ -74,6 +75,57 @@ export default function Perfil() {
     router.replace('/login');
   }
 
+  /** Apaga só o perfil de aprendizagem; o estudante refaz o onboarding. */
+  async function excluirPerfil() {
+    const usuario = auth.currentUser;
+    if (!usuario) return router.replace('/login');
+    setErro('');
+    setSucesso('');
+    setSalvando(true);
+    try {
+      await deleteDoc(doc(db, 'perfisAprendizagem', usuario.uid));
+      setCurso('');
+      setPeriodo('');
+      setEditando(false);
+      router.replace('/onboarding');
+    } catch {
+      setErro('Não foi possível excluir o perfil. Verifique sua conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  /** Apaga o cadastro (documentos no Firestore e a conta de login) e os dados deste aparelho. */
+  async function excluirConta() {
+    const usuario = auth.currentUser;
+    if (!usuario) return router.replace('/login');
+    setErro('');
+    setSucesso('');
+    setSalvando(true);
+    try {
+      const lote = writeBatch(db);
+      lote.delete(doc(db, 'estudantes', usuario.uid));
+      lote.delete(doc(db, 'perfisAprendizagem', usuario.uid));
+      await lote.commit();
+      await AsyncStorage.removeItem(`astra:v1:${usuario.uid}`).catch(() => {});
+      await deleteUser(usuario);
+      sair();
+      router.replace('/login');
+    } catch (e: any) {
+      if (e?.code === 'auth/requires-recent-login') setErro('Por segurança, saia e entre de novo antes de excluir a conta.');
+      else setErro('Não foi possível excluir a conta. Verifique sua conexão.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function confirmarExclusao(titulo: string, texto: string, acao: () => void) {
+    Alert.alert(titulo, texto, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Excluir', style: 'destructive', onPress: acao },
+    ]);
+  }
+
   if (sessao === 'demo') {
     return (
       <Tela>
@@ -126,6 +178,33 @@ export default function Perfil() {
         onLembretes={alternarLembretes}
         onResumo={alternarResumoDiario}
       />
+
+      <Cartao style={{ gap: 12 }}>
+        <Txt v="subtitulo">Excluir dados</Txt>
+        <Txt v="legenda" cor="textSecondary">
+          O perfil de aprendizagem pode ser excluído sem apagar a conta. Ao excluir, o onboarding aparece de novo.
+        </Txt>
+        <Botao
+          titulo="Excluir perfil de aprendizagem"
+          variante="perigo"
+          desabilitado={salvando}
+          onPress={() =>
+            confirmarExclusao('Excluir perfil?', 'Seu curso e período serão apagados.', excluirPerfil)
+          }
+        />
+        <Botao
+          titulo="Excluir minha conta"
+          variante="perigo"
+          desabilitado={salvando}
+          onPress={() =>
+            confirmarExclusao(
+              'Excluir conta?',
+              'Sua conta, seu perfil e os dados deste aparelho serão apagados. Não dá para desfazer.',
+              excluirConta
+            )
+          }
+        />
+      </Cartao>
 
       <Botao titulo="Sair da conta" icone="log-out-outline" variante="perigo" onPress={sairDaConta} />
     </Tela>

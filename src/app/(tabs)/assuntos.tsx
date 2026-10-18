@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, Share, View } from 'react-native';
+import { Alert, Pressable, Share, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Botao, Cabecalho, Cartao, Chip, Icone, Selo, SeloFonte, Tela, Txt, Vazio } from '@/components/ui';
@@ -8,7 +8,7 @@ import { useAstra } from '@/lib/store';
 import type { Aviso, Grupo } from '@/lib/types';
 
 export default function Assuntos() {
-  const { agrupamento, corrigirGrupo, correcoes } = useAstra();
+  const { agrupamento, corrigirGrupo, desfazerCorrecao, correcoes } = useAstra();
   const [aberto, setAberto] = useState<string | null>(null);
   const [corrigindo, setCorrigindo] = useState<string | null>(null);
   const totalCorrecoes = Object.keys(correcoes).length;
@@ -58,6 +58,8 @@ export default function Assuntos() {
               todos={agrupamento.grupos}
               aberto={aberto === g.id}
               corrigindo={corrigindo}
+              correcoes={correcoes}
+              onDesfazer={desfazerCorrecao}
               onAlternar={() => setAberto(aberto === g.id ? null : g.id)}
               onCorrigir={setCorrigindo}
               onMover={(aviso, destino) => {
@@ -77,6 +79,8 @@ function CartaoGrupo({
   todos,
   aberto,
   corrigindo,
+  correcoes,
+  onDesfazer,
   onAlternar,
   onCorrigir,
   onMover,
@@ -85,6 +89,8 @@ function CartaoGrupo({
   todos: Grupo[];
   aberto: boolean;
   corrigindo: string | null;
+  correcoes: Record<string, string>;
+  onDesfazer: (avisoId: string) => void;
   onAlternar: () => void;
   onCorrigir: (id: string | null) => void;
   onMover: (aviso: Aviso, destino: Grupo) => void;
@@ -120,6 +126,23 @@ function CartaoGrupo({
                   >
                     <Txt v="legenda" cor="primary" style={{ fontWeight: '700' }}>
                       Assunto errado?
+                    </Txt>
+                  </Pressable>
+                ) : null}
+                {correcoes[a.id] ? (
+                  <Pressable
+                    onPress={() =>
+                      Alert.alert('Desfazer correção?', 'A mensagem volta para o agrupamento automático.', [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Desfazer', style: 'destructive', onPress: () => onDesfazer(a.id) },
+                      ])
+                    }
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Desfazer correção desta mensagem"
+                  >
+                    <Txt v="legenda" cor="danger" style={{ fontWeight: '700' }}>
+                      Desfazer correção
                     </Txt>
                   </Pressable>
                 ) : null}

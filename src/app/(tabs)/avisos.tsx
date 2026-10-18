@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Cabecalho, Cartao, Chip, Icone, Selo, SeloFonte, Tela, Txt, Vazio, FONTES, type IconName } from '@/components/ui';
@@ -22,8 +22,15 @@ const ICONE_TIPO: Record<TipoAviso, IconName> = {
   material: 'document-text-outline',
 };
 
+function confirmarRemocao(texto: string, remover: () => void) {
+  Alert.alert('Remover mensagem?', texto.length > 120 ? `${texto.slice(0, 117)}...` : texto, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Remover', style: 'destructive', onPress: remover },
+  ]);
+}
+
 export default function Avisos() {
-  const { avisos, repetidos } = useAstra();
+  const { avisos, repetidos, removerAviso } = useAstra();
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
   // Mensagens quase iguais de canais diferentes viram um único aviso
@@ -79,6 +86,17 @@ export default function Avisos() {
                       Também enviado em {outros.join(', ')}
                     </Txt>
                   ) : null}
+                  <Pressable
+                    onPress={() => confirmarRemocao(a.texto, () => removerAviso(a.id))}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remover mensagem"
+                    style={{ alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }}
+                  >
+                    <Txt v="legenda" cor="danger" style={{ fontWeight: '700' }}>
+                      Remover mensagem
+                    </Txt>
+                  </Pressable>
                 </View>
               </View>
             </Cartao>

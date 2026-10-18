@@ -14,6 +14,7 @@ import { chaveDia, diasAte } from './datas';
 import { avisosDemo, diarioDemo, resumoDemo } from './demo';
 import { agruparAvisos, agruparRepetidos, type ResultadoAgrupamento } from './ml';
 import { criarAvisos, detectarDisciplina } from './parse';
+import { desfazerCorrecaoDoAviso, removerAvisoEComCorrecoes, removerRegistroDoDia } from './crud';
 import type { Atividade, Aviso, FonteId, RegistroDiario, ResumoSigaa } from './types';
 
 export type Sessao = 'carregando' | 'logado' | 'demo' | 'anonimo';
@@ -67,6 +68,9 @@ interface Contexto extends Persistido {
   desconectarSigaa: () => void;
   importarMensagens: (texto: string, fonte: FonteId) => number;
   removerAvisosDaFonte: (fonte: FonteId) => void;
+  removerAviso: (id: string) => void;
+  desfazerCorrecao: (avisoId: string) => void;
+  removerRegistroDiario: (dia: string) => void;
   alternarConcluida: (id: string) => void;
   adicionarAtividade: (a: Omit<Atividade, 'id' | 'concluida' | 'fonte'>) => void;
   removerAtividade: (id: string) => void;
@@ -242,6 +246,23 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const removerAviso = useCallback(
+    (id: string) =>
+      setDados((d) => ({ ...d, ...removerAvisoEComCorrecoes(d.avisos, d.correcoes, id) })),
+    []
+  );
+
+  const desfazerCorrecao = useCallback(
+    (avisoId: string) =>
+      setDados((d) => ({ ...d, correcoes: desfazerCorrecaoDoAviso(d.correcoes, avisoId) })),
+    []
+  );
+
+  const removerRegistroDiario = useCallback(
+    (dia: string) => setDados((d) => ({ ...d, diario: removerRegistroDoDia(d.diario, dia) })),
+    []
+  );
+
   const alternarConcluida = useCallback(
     (id: string) =>
       setDados((d) => {
@@ -401,6 +422,9 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     desconectarSigaa,
     importarMensagens,
     removerAvisosDaFonte,
+    removerAviso,
+    desfazerCorrecao,
+    removerRegistroDiario,
     alternarConcluida,
     adicionarAtividade,
     removerAtividade,
