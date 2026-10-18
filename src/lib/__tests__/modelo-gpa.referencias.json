@@ -1,0 +1,98 @@
+[
+ {
+  "entrada": {
+   "study_hours_per_day": 7.5,
+   "sleep_hours": 7.3,
+   "mental_stress_level": 3.7,
+   "class_attendance_percent": 100.0,
+   "social_media_hours": 5.1,
+   "age": 26.0
+  },
+  "perfil": "Perfil Comportamental C",
+  "esperado": 4.0
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 1.9,
+   "sleep_hours": 6.1,
+   "mental_stress_level": 4.8,
+   "class_attendance_percent": 80.0,
+   "social_media_hours": 4.4,
+   "age": 26.0
+  },
+  "perfil": "Perfil Comportamental A",
+  "esperado": 3.1047794296034503
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 3.0,
+   "sleep_hours": 9.9,
+   "mental_stress_level": 4.2,
+   "class_attendance_percent": 95.0,
+   "social_media_hours": 5.4,
+   "age": 26.0
+  },
+  "perfil": "Perfil Comportamental B",
+  "esperado": 3.6596678501618563
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 3.5,
+   "sleep_hours": 7.6,
+   "mental_stress_level": 3.3,
+   "class_attendance_percent": 85.0,
+   "social_media_hours": 2.5,
+   "age": 26.0
+  },
+  "perfil": "Perfil Comportamental B",
+  "esperado": 3.6330703171347616
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 5.1,
+   "sleep_hours": 7.2,
+   "mental_stress_level": 3.0,
+   "class_attendance_percent": 100.0,
+   "social_media_hours": 0.3,
+   "age": 24.0
+  },
+  "perfil": "Perfil Comportamental B",
+  "esperado": 4.0
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 2.1,
+   "sleep_hours": 6.8,
+   "mental_stress_level": 4.9,
+   "class_attendance_percent": 83.0,
+   "social_media_hours": 2.0,
+   "age": 20.0
+  },
+  "perfil": "Perfil Comportamental A",
+  "esperado": 3.293642182429181
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 3.9,
+   "sleep_hours": 6.8,
+   "mental_stress_level": 5.3,
+   "class_attendance_percent": 87.0,
+   "social_media_hours": 5.1,
+   "age": 26.0
+  },
+  "perfil": "Perfil Comportamental C",
+  "esperado": 3.515498912516555
+ },
+ {
+  "entrada": {
+   "study_hours_per_day": 3.7,
+   "sleep_hours": 5.5,
+   "mental_stress_level": 4.7,
+   "class_attendance_percent": 93.0,
+   "social_media_hours": 2.6,
+   "age": 27.0
+  },
+  "perfil": "Perfil Comportamental C",
+  "esperado": 3.606552962485383
+ }
+]

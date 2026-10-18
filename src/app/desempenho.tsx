@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Cabecalho, Cartao, Icone, Secao, Selo, Tela, Txt, Vazio } from '@/components/ui';
+import { Campo, Cabecalho, Cartao, Icone, Secao, Selo, Tela, Txt, Vazio } from '@/components/ui';
 import { alertasRotina, fmt, mediasRotina, pontosDeAtencao } from '@/lib/analise';
+import { estresseDoDiario, preverGpa } from '@/lib/previsao';
 import { useAstra } from '@/lib/store';
 import type { HistoricoDisciplina } from '@/lib/types';
 
@@ -71,6 +72,8 @@ export default function Desempenho() {
         </Secao>
       ) : null}
 
+      <EstimativaGpa medias={medias} />
+
       <Secao titulo="Rotina" acao="Registrar hoje" onAcao={() => router.push('/diario')}>
         {medias ? (
           <Cartao>
@@ -117,10 +120,75 @@ export default function Desempenho() {
       ))}
 
       <Txt v="legenda" cor="textMuted">
-        Os pontos de atenção seguem regras simples (média abaixo de 6, muitas faltas). Os modelos de previsão do artigo ainda
-        não rodam no app.
+        Os pontos de atenção seguem regras simples (média abaixo de 6, muitas faltas).
       </Txt>
     </Tela>
+  );
+}
+
+/** Valores típicos do conjunto usado no treino, para os campos que o app ainda não coleta. */
+const PADRAO = { frequencia: '93', redes: '2,8', idade: '23' };
+
+function numero(texto: string): number | null {
+  const n = Number(texto.replace(',', '.'));
+  return texto.trim() !== '' && Number.isFinite(n) ? n : null;
+}
+
+function EstimativaGpa({ medias }: { medias: { sono: number; estudo: number; estresse: number } | null }) {
+  const [estudo, setEstudo] = useState(medias ? fmt(medias.estudo).replace('.', ',') : '2,5');
+  const [sono, setSono] = useState(medias ? fmt(medias.sono).replace('.', ',') : '7');
+  const [estresse, setEstresse] = useState(medias ? fmt(medias.estresse).replace('.', ',') : '3');
+  const [frequencia, setFrequencia] = useState(PADRAO.frequencia);
+  const [redes, setRedes] = useState(PADRAO.redes);
+  const [idade, setIdade] = useState(PADRAO.idade);
+
+  const resultado = useMemo(() => {
+    const v = { estudo: numero(estudo), sono: numero(sono), estresse: numero(estresse), frequencia: numero(frequencia), redes: numero(redes), idade: numero(idade) };
+    const faixas =
+      v.estudo !== null && v.estudo >= 0 && v.estudo <= 16 &&
+      v.sono !== null && v.sono >= 0 && v.sono <= 24 &&
+      v.estresse !== null && v.estresse >= 1 && v.estresse <= 5 &&
+      v.frequencia !== null && v.frequencia >= 0 && v.frequencia <= 100 &&
+      v.redes !== null && v.redes >= 0 && v.redes <= 24 &&
+      v.idade !== null && v.idade >= 10 && v.idade <= 90;
+    if (!faixas) return null;
+    return preverGpa({
+      estudoHoras: v.estudo!,
+      sonoHoras: v.sono!,
+      estresse: estresseDoDiario(v.estresse!),
+      frequencia: v.frequencia!,
+      redesHoras: v.redes!,
+      idade: v.idade!,
+    });
+  }, [estudo, sono, estresse, frequencia, redes, idade]);
+
+  return (
+    <Secao titulo="Estimativa de GPA">
+      <Cartao style={{ gap: 14 }}>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <Icone nome="analytics-outline" tamanho={22} cor="primary" />
+          <View style={{ flex: 1 }}>
+            <Txt v="subtitulo">{resultado ? `GPA estimado: ${fmt(resultado.gpa)}` : 'Preencha os campos'}</Txt>
+            {resultado ? (
+              <Txt v="legenda" cor="textSecondary">
+                {resultado.perfil}
+              </Txt>
+            ) : null}
+          </View>
+          <Selo rotulo="Experimental" tom="alerta" />
+        </View>
+        <Campo rotulo="Horas de estudo por dia" value={estudo} onChangeText={setEstudo} keyboardType="decimal-pad" />
+        <Campo rotulo="Horas de sono por noite" value={sono} onChangeText={setSono} keyboardType="decimal-pad" />
+        <Campo rotulo="Estresse (1 a 5)" value={estresse} onChangeText={setEstresse} keyboardType="decimal-pad" />
+        <Campo rotulo="Frequência nas aulas (%)" value={frequencia} onChangeText={setFrequencia} keyboardType="decimal-pad" />
+        <Campo rotulo="Horas por dia em redes sociais" value={redes} onChangeText={setRedes} keyboardType="decimal-pad" />
+        <Campo rotulo="Idade" value={idade} onChangeText={setIdade} keyboardType="number-pad" />
+        <Txt v="legenda" cor="textMuted">
+          Estimativa feita no aparelho, sem enviar dados. O modelo foi treinado com 10 mil estudantes de vários países, não com
+          dados da UFRPE, e erra em média cerca de 0,15 ponto (escala 0 a 4). Não use para decisões sobre o seu curso.
+        </Txt>
+      </Cartao>
+    </Secao>
   );
 }
 
