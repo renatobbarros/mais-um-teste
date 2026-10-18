@@ -15,14 +15,17 @@ import {
   Txt,
   Vazio,
 } from '@/components/ui';
-import { chaveDia, hora, lerDataHora, rotuloDia } from '@/lib/datas';
+import { ConfirmarHorarios } from '@/components/confirmarHorarios';
+import { Seletor, NAO_INFORMADO_TEXTO } from '@/components/seletor';
+import { chaveDia, lerDataHora, rotuloDia } from '@/lib/datas';
+import { textoHora } from '@/lib/horarios';
 import { useAstra } from '@/lib/store';
 import type { Atividade } from '@/lib/types';
 
 type Filtro = 'pendentes' | 'concluidas';
 
 export default function Agenda() {
-  const { atividades, alternarConcluida, adicionarAtividade, removerAtividade } = useAstra();
+  const { atividades, alternarConcluida, adicionarAtividade, removerAtividade, pendentesHorario, confirmarHorario, sigaa } = useAstra();
   const [filtro, setFiltro] = useState<Filtro>('pendentes');
   const [formAberto, setFormAberto] = useState(false);
 
@@ -52,8 +55,11 @@ export default function Agenda() {
         }
       />
 
+      <ConfirmarHorarios itens={pendentesHorario} onConfirmar={confirmarHorario} />
+
       {formAberto ? (
         <NovaAtividade
+          disciplinas={(sigaa?.disciplinas ?? []).map((d) => d.titulo)}
           onSalvar={(a) => {
             adicionarAtividade(a);
             setFormAberto(false);
@@ -139,7 +145,7 @@ function LinhaAtividade({
           ) : null}
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <Txt v="legenda" cor="primary" style={{ fontWeight: '700' }}>
-              {hora(new Date(a.data))}
+              {textoHora(a)}
             </Txt>
             <SeloFonte fonte={a.fonte} />
           </View>
@@ -155,9 +161,17 @@ function LinhaAtividade({
 }
 
 function NovaAtividade({
+  disciplinas,
   onSalvar,
 }: {
-  onSalvar: (a: { titulo: string; disciplina?: string; data: string; tipo: Atividade['tipo'] }) => void;
+  disciplinas: string[];
+  onSalvar: (a: {
+    titulo: string;
+    disciplina?: string;
+    data: string;
+    tipo: Atividade['tipo'];
+    horaNaoInformada?: boolean;
+  }) => void;
 }) {
   const [titulo, setTitulo] = useState('');
   const [disciplina, setDisciplina] = useState('');
@@ -169,24 +183,31 @@ function NovaAtividade({
     if (titulo.trim().length < 3) return setErro('Dê um nome para a tarefa.');
     const data = lerDataHora(dia, horario);
     if (!data) return setErro('Use a data no formato 25/10 e a hora como 14:30.');
+    const disciplinaFinal = disciplina.trim() && disciplina !== NAO_INFORMADO_TEXTO ? disciplina.trim() : undefined;
     onSalvar({
       titulo: titulo.trim(),
-      disciplina: disciplina.trim() || undefined,
+      disciplina: disciplinaFinal,
       data: data.toISOString(),
       tipo: 'tarefa',
+      // Sem hora, a tarefa fica "horário não informado" (sem perguntar de novo)
+      horaNaoInformada: horario.trim() ? undefined : true,
     });
   }
 
   return (
     <Cartao>
       <Campo rotulo="Tarefa" value={titulo} onChangeText={setTitulo} placeholder="Ex.: Estudar para a prova" />
-      <Campo rotulo="Disciplina (opcional)" value={disciplina} onChangeText={setDisciplina} />
+      {disciplinas.length > 0 ? (
+        <Seletor rotulo="Disciplina" opcoes={disciplinas} valor={disciplina} onChange={setDisciplina} />
+      ) : (
+        <Campo rotulo="Disciplina (opcional)" value={disciplina} onChangeText={setDisciplina} />
+      )}
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Campo rotulo="Data" value={dia} onChangeText={setDia} placeholder="25/10" keyboardType="numbers-and-punctuation" />
         </View>
         <View style={{ flex: 1 }}>
-          <Campo rotulo="Hora" value={horario} onChangeText={setHorario} placeholder="14:30" keyboardType="numbers-and-punctuation" />
+          <Campo rotulo="Hora (opcional)" value={horario} onChangeText={setHorario} placeholder="14:30" keyboardType="numbers-and-punctuation" />
         </View>
       </View>
       {erro ? <Mensagem tom="erro" texto={erro} /> : null}

@@ -9,6 +9,11 @@ const DIAS_SEMANA = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta',
 
 /** Procura uma data/hora de entrega no texto. Devolve null se não achar nenhuma. */
 export function extrairPrazo(texto: string, base: Date = new Date()): Date | null {
+  return extrairPrazoDetalhado(texto, base)?.data ?? null;
+}
+
+/** Como `extrairPrazo`, mas também diz se o texto trazia o horário (sem horário, usa 23h59). */
+export function extrairPrazoDetalhado(texto: string, base: Date = new Date()): { data: Date; temHora: boolean } | null {
   const t = normalizar(texto);
   let data: Date | null = null;
 
@@ -42,10 +47,10 @@ export function extrairPrazo(texto: string, base: Date = new Date()): Date | nul
   const hora = t.match(/\b(\d{1,2})(?::|h)(\d{2})?\b/);
   if (hora && Number(hora[1]) < 24) {
     data.setHours(Number(hora[1]), Number(hora[2] ?? 0), 0, 0);
-  } else {
-    data.setHours(23, 59, 0, 0);
+    return { data, temHora: true };
   }
-  return data;
+  data.setHours(23, 59, 0, 0);
+  return { data, temHora: false };
 }
 
 export function detectarTipo(texto: string): TipoAviso {
@@ -128,8 +133,9 @@ export function criarAvisos(
     .filter((m) => m.texto.trim().length >= 8)
     .map((m, i) => {
       const recebido = m.data ?? agora;
-      const prazo = extrairPrazo(m.texto, recebido);
+      const prazo = extrairPrazoDetalhado(m.texto, recebido);
       const tipo = detectarTipo(m.texto);
+      const temPrazo = tipo === 'prazo' && prazo !== null;
       return {
         id: `${fonte}-${recebido.getTime()}-${i}-${Math.abs(hash(m.texto))}`,
         fonte,
@@ -137,7 +143,8 @@ export function criarAvisos(
         recebidoEm: recebido.toISOString(),
         tipo,
         disciplina: detectarDisciplina(m.texto, disciplinas),
-        prazo: tipo === 'prazo' && prazo ? prazo.toISOString() : undefined,
+        prazo: temPrazo ? prazo.data.toISOString() : undefined,
+        prazoSemHora: temPrazo && !prazo.temHora ? true : undefined,
       };
     });
 }

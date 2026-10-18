@@ -3,12 +3,14 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Botao, Cabecalho, Cartao, Icone, Secao, Selo, SeloFonte, Tela, Txt, Vazio } from '@/components/ui';
-import { diasAte, rotuloPrazo } from '@/lib/datas';
+import { ConfirmarHorarios } from '@/components/confirmarHorarios';
+import { diasAte } from '@/lib/datas';
+import { textoPrazo } from '@/lib/horarios';
 import { useAstra } from '@/lib/store';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function Inicio() {
-  const { nome, atividades, avisos, sigaa } = useAstra();
+  const { nome, atividades, avisos, sigaa, pendentesHorario, confirmarHorario } = useAstra();
   const t = useTheme();
 
   const pendentes = atividades.filter((a) => !a.concluida && diasAte(new Date(a.data)) >= 0);
@@ -47,6 +49,10 @@ export default function Inicio() {
           />
         </Cartao>
       ) : (
+        <ConfirmarHorarios itens={pendentesHorario} onConfirmar={confirmarHorario} />
+      )}
+
+      {semDados ? null : (
         <Secao titulo="Próximos prazos" acao="Ver agenda" onAcao={() => router.push('/agenda')}>
           {proximas.length === 0 ? (
             <Cartao>
@@ -61,7 +67,7 @@ export default function Inicio() {
                     <Txt v="subtitulo" style={{ flex: 1 }} numberOfLines={2}>
                       {a.titulo}
                     </Txt>
-                    <Selo rotulo={rotuloPrazo(new Date(a.data))} tom={urgente ? 'alerta' : 'neutro'} />
+                    <Selo rotulo={textoPrazo(a)} tom={urgente ? 'alerta' : 'neutro'} />
                   </View>
                   <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
                     {a.disciplina ? (

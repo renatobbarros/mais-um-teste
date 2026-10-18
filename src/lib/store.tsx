@@ -14,7 +14,8 @@ import { chaveDia, diasAte } from './datas';
 import { avisosDemo, diarioDemo, resumoDemo } from './demo';
 import { agruparAvisos, agruparRepetidos, type ResultadoAgrupamento } from './ml';
 import { criarAvisos, detectarDisciplina } from './parse';
-import { desfazerCorrecaoDoAviso, removerAvisoEComCorrecoes, removerRegistroDoDia } from './crud';
+import { desfazerCorrecaoDoAviso, editarAvisoNaLista, removerAvisoEComCorrecoes, removerRegistroDoDia, type EdicaoAviso } from './crud';
+import { aplicarHorarios, chaveHorario, lerHora, NAO_INFORMADO, pendentesDeHorario, semHoraNoSigaa } from './horarios';
 import type { Atividade, Aviso, FonteId, RegistroDiario, ResumoSigaa } from './types';
 
 export type Sessao = 'carregando' | 'logado' | 'demo' | 'anonimo';
@@ -27,6 +28,8 @@ interface Persistido {
   concluidas: Record<string, true>;
   diario: RegistroDiario[];
   correcoes: Record<string, string>;
+  /** Horários confirmados pelo estudante para prazos que vieram sem hora ('HH:MM' ou 'nao-informado'). */
+  horarios: Record<string, string>;
   ponte: string;
   /** De onde ler o SIGAA: direto no celular ou por um servidor (ponte). */
   modoSigaa: 'nativo' | 'ponte';
@@ -46,6 +49,7 @@ const VAZIO: Persistido = {
   concluidas: {},
   diario: [],
   correcoes: {},
+  horarios: {},
   ponte: PONTE_PADRAO,
   modoSigaa: sigaaNativoDisponivel ? 'nativo' : 'ponte',
   lembretes: false,
@@ -69,6 +73,10 @@ interface Contexto extends Persistido {
   importarMensagens: (texto: string, fonte: FonteId) => number;
   removerAvisosDaFonte: (fonte: FonteId) => void;
   removerAviso: (id: string) => void;
+  editarAviso: (id: string, edicao: EdicaoAviso) => void;
+  /** Atividades futuras que esperam o estudante confirmar o horário. */
+  pendentesHorario: Atividade[];
+  confirmarHorario: (atividade: Atividade, valor: string) => void;
   desfazerCorrecao: (avisoId: string) => void;
   removerRegistroDiario: (dia: string) => void;
   alternarConcluida: (id: string) => void;
@@ -94,6 +102,7 @@ const resumoParaAtividades = (r: ResumoSigaa | null): Atividade[] =>
     fonte: 'sigaa',
     tipo: a.tipo,
     concluida: a.concluida,
+    semHora: semHoraNoSigaa(a.data) || undefined,
   }));
 
 function tituloDoAviso(texto: string): string {
@@ -252,6 +261,35 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const editarAviso = useCallback(
+    (id: string, edicao: EdicaoAviso) =>
+      setDados((d) => {
+        const horarios = { ...d.horarios };
+        // Quem edita o prazo já decidiu o horário
+        if (edicao.prazo !== undefined) delete horarios[id];
+        return { ...d, avisos: editarAvisoNaLista(d.avisos, id, edicao), horarios };
+      }),
+    []
+  );
+
+  const confirmarHorario = useCallback(
+    (atividade: Atividade, valor: string) =>
+      setDados((d) => {
+        // Prazo que veio de uma mensagem: corrige a própria mensagem, para tudo mostrar o mesmo horário
+        if (d.avisos.some((a) => a.id === atividade.id)) {
+          const hm = valor === NAO_INFORMADO ? null : lerHora(valor);
+          const data = new Date(atividade.data);
+          if (hm) data.setHours(hm.h, hm.m, 0, 0);
+          return {
+            ...d,
+            avisos: editarAvisoNaLista(d.avisos, atividade.id, { prazo: data.toISOString(), horaNaoInformada: !hm }),
+          };
+        }
+        return { ...d, horarios: { ...d.horarios, [chaveHorario(atividade)]: valor } };
+      }),
+    []
+  );
+
   const desfazerCorrecao = useCallback(
     (avisoId: string) =>
       setDados((d) => ({ ...d, correcoes: desfazerCorrecaoDoAviso(d.correcoes, avisoId) })),
@@ -345,11 +383,17 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
         fonte: a.fonte,
         tipo: /prova|avalia|exame/i.test(a.texto) ? 'avaliacao' : 'tarefa',
         concluida: false,
+        semHora: (a.prazoSemHora && !a.horaNaoInformada) || undefined,
+        horaNaoInformada: a.horaNaoInformada,
       }));
-    return [...doSigaa, ...dosAvisos, ...dados.manuais]
-      .map((a) => ({ ...a, concluida: a.concluida || Boolean(dados.concluidas[a.id]) }))
-      .sort((a, b) => a.data.localeCompare(b.data));
-  }, [dados.sigaa, dados.manuais, dados.concluidas, avisosOrdenados]);
+    const todas = [...doSigaa, ...dosAvisos, ...dados.manuais].map((a) => ({
+      ...a,
+      concluida: a.concluida || Boolean(dados.concluidas[a.id]),
+    }));
+    return aplicarHorarios(todas, dados.horarios).sort((a, b) => a.data.localeCompare(b.data));
+  }, [dados.sigaa, dados.manuais, dados.concluidas, dados.horarios, avisosOrdenados]);
+
+  const pendentesHorario = useMemo(() => pendentesDeHorario(atividades), [atividades]);
 
   const alternarNotificacao = useCallback(async (campo: 'lembretes' | 'resumoDiario', ligar: boolean) => {
     if (ligar && !(await pedirPermissaoLembretes())) return false;
@@ -423,6 +467,9 @@ export function AstraProvider({ children }: { children: React.ReactNode }) {
     importarMensagens,
     removerAvisosDaFonte,
     removerAviso,
+    editarAviso,
+    pendentesHorario,
+    confirmarHorario,
     desfazerCorrecao,
     removerRegistroDiario,
     alternarConcluida,

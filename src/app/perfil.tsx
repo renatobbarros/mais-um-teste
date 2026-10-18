@@ -5,7 +5,9 @@ import { router } from 'expo-router';
 import { deleteUser, signOut, updateProfile, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { deleteDoc, doc, getDoc, writeBatch } from 'firebase/firestore';
 
+import { NAO_INFORMADO_TEXTO, Seletor } from '@/components/seletor';
 import { Botao, Cabecalho, Campo, Cartao, Mensagem, Selo, Tela, Txt } from '@/components/ui';
+import { CURSOS, PERIODOS } from '@/lib/opcoes';
 import { useTheme } from '@/hooks/use-theme';
 import { lembretesDisponiveis } from '@/lib/lembretes';
 import { useAstra } from '@/lib/store';
@@ -43,7 +45,7 @@ export default function Perfil() {
     const usuario = auth.currentUser;
     if (!usuario) return router.replace('/login');
     const emailNovo = email.trim().toLowerCase();
-    if (!nome.trim() || !emailNovo || !curso.trim() || !periodo.trim()) return setErro('Preencha todos os campos.');
+    if (!nome.trim() || !emailNovo) return setErro('Preencha nome e e-mail.');
     if (!EMAIL_VALIDO.test(emailNovo)) return setErro('Informe um e-mail válido.');
 
     setErro('');
@@ -55,7 +57,10 @@ export default function Perfil() {
 
       const lote = writeBatch(db);
       lote.update(doc(db, 'estudantes', usuario.uid), { nome: nome.trim(), email: emailNovo });
-      lote.update(doc(db, 'perfisAprendizagem', usuario.uid), { curso: curso.trim(), periodo: periodo.trim() });
+      lote.update(doc(db, 'perfisAprendizagem', usuario.uid), {
+        curso: curso.trim() || NAO_INFORMADO_TEXTO,
+        periodo: periodo.trim() || NAO_INFORMADO_TEXTO,
+      });
       await lote.commit();
 
       setEditando(false);
@@ -160,8 +165,23 @@ export default function Perfil() {
       <Cartao style={{ gap: 16 }}>
         <Campo rotulo="Nome" value={nome} onChangeText={setNome} editable={editando && !salvando} autoCapitalize="words" />
         <Campo rotulo="E-mail" value={email} onChangeText={setEmail} editable={editando && !salvando} keyboardType="email-address" autoCapitalize="none" />
-        <Campo rotulo="Curso" value={curso} onChangeText={setCurso} editable={editando && !salvando} />
-        <Campo rotulo="Período" value={periodo} onChangeText={setPeriodo} editable={editando && !salvando} />
+        {editando ? (
+          <>
+            <Seletor
+              rotulo="Curso"
+              opcoes={curso && curso !== NAO_INFORMADO_TEXTO && !CURSOS.includes(curso) ? [curso, ...CURSOS] : CURSOS}
+              valor={curso}
+              onChange={setCurso}
+              placeholderOutro="Nome do curso"
+            />
+            <Seletor rotulo="Período" opcoes={PERIODOS} valor={periodo} onChange={setPeriodo} placeholderOutro="Ex.: 13º" />
+          </>
+        ) : (
+          <>
+            <Campo rotulo="Curso" value={curso || NAO_INFORMADO_TEXTO} editable={false} />
+            <Campo rotulo="Período" value={periodo || NAO_INFORMADO_TEXTO} editable={false} />
+          </>
+        )}
         {erro ? <Mensagem tom="erro" texto={erro} /> : null}
         {sucesso ? <Mensagem tom="sucesso" texto={sucesso} /> : null}
         {editando ? (

@@ -12,6 +12,10 @@ export interface Aviso {
   disciplina?: string;
   /** Data de entrega/prova encontrada dentro do texto (ISO). */
   prazo?: string;
+  /** O texto tinha a data mas não o horário: o app pede para o estudante confirmar. */
+  prazoSemHora?: boolean;
+  /** O estudante disse que o horário não foi informado. */
+  horaNaoInformada?: boolean;
 }
 
 export interface Atividade {
@@ -22,6 +26,10 @@ export interface Atividade {
   fonte: FonteId;
   tipo: 'tarefa' | 'avaliacao' | 'questionario';
   concluida: boolean;
+  /** Falta confirmar o horário (a data veio sem hora). */
+  semHora?: boolean;
+  /** O horário não foi informado (escolha do estudante). */
+  horaNaoInformada?: boolean;
 }
 
 export interface IndiceAcademico {
