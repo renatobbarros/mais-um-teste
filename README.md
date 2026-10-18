@@ -53,7 +53,7 @@ Para executar o projeto localmente, é necessário ter instalado:
 
 - **Node.js**
 - **npm**
-- **Andorid SDK** ( *Caso deseje executar no Android* )
+- **Android SDK** ( *Caso deseje executar no Android* )
 - **ADB** ( *Caso queira executar em um dispositivo físico* )
 
 Para desenvolvimento utilizando Expo Go:
@@ -144,9 +144,9 @@ npx eslint src           # estilo
 Fluxos ponta a ponta para celular (Maestro) estão em `.maestro/`. Com o app instalado e o [Maestro](https://maestro.mobile.dev) no computador: `maestro test .maestro`.
 
 ### 📱 Android
-Para executar em um dispositivo Andorid com o ambiente nativo configurado:
+Para executar em um dispositivo Android com o ambiente nativo configurado:
 ```bash
-npx expo run:andorid --device
+npx expo run:android --device
 ```
 > Funcionalidades que exigem código nativo podem necessitar de uma Development Build
 
