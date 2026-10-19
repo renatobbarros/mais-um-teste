@@ -19,6 +19,9 @@ export function explicarErroSigaa(mensagens: string[]): string {
   if (/invalid response after login|unexpected|inesperad/i.test(todas)) {
     return 'O SIGAA mostrou uma tela inesperada depois do login. Entre uma vez pelo site do SIGAA (pode haver um aviso ou termo para aceitar) e tente de novo.';
   }
+  if (/session expired|expirad/i.test(todas)) {
+    return 'O SIGAA encerrou a sessão no meio da leitura. Tente de novo; se continuar, entre uma vez pelo site do SIGAA.';
+  }
   if (/tempo esgotado|timeout|abort/i.test(todas)) {
     return 'O SIGAA demorou demais para responder. Tente de novo em alguns minutos.';
   }

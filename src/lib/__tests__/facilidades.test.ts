@@ -106,3 +106,7 @@ test('perfil a partir do SIGAA: curso limpo e período estimado', () => {
   );
   assert.equal(periodoEstimado({ historico: [], disciplinas: [] }), null);
 });
+
+test('sessão expirada do SIGAA vira mensagem própria', () => {
+  assert.match(explicarErroSigaa(['expo: SIGAA: Session expired.']), /encerrou a sessão/);
+});

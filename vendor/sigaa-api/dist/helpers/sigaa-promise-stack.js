@@ -101,6 +101,9 @@ class SigaaPromiseStack {
         return promiseFunction().then(resolve, reject);
       };
     });
+    // Quem chamou recebe a rejeição normalmente; isto só evita "Uncaught (in promise)" quando
+    // ninguém espera pela fila (o erro do pedido também é lançado por quem fez a requisição).
+    promise.catch(() => {});
     promiseObject.promise = promise;
     this.storedPromises.push(promiseObject);
     this.promiseExecutor();
