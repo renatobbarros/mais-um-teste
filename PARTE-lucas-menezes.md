@@ -4,27 +4,29 @@ Material da parte de **Lucas Menezes** para atualizar o repositório do grupo (`
 **Não faça merge desta branch**: ela é só a fonte dos arquivos. Os commits são feitos por você,
 no `dsi`, com a sua conta do GitHub.
 
-Você faz **1 commit** no **Dia 1** e termina com
-**7** na `main` do `dsi`.
+Você faz **1 commit** **hoje (seg, 19/10)** e termina com
+**7** na `main` do `dsi`. **Prazo: tudo publicado até amanhã (ter, 20/10).**
 
 ## Plano do grupo
 
-| Ordem | Pessoa | Dia | Commits hoje no dsi | Commits a fazer | Total |
+| Ordem | Pessoa | Quando | Commits hoje no dsi | Commits a fazer | Total |
 |---|---|---|---|---|---|
-| 1 | Lucas Menezes | Dia 1 | 6 | 1 | 7 |
-| 2 | Felipe Neves | Dia 1 | 3 | 3 | 6 |
-| 3 | Renato Barros | Dia 2 | 2 | 6 | 8 |
-| 4 | Bruno Fellype | Dia 2 | 5 | 1 | 6 |
-| 5 | Heitor Quental | Dia 3 | 3 | 4 | 7 |
+| 1 | Lucas Menezes | hoje (seg, 19/10) | 6 | 1 | 7 |
+| 2 | Felipe Neves | hoje (seg, 19/10) | 3 | 3 | 6 |
+| 3 | Renato Barros | hoje (seg, 19/10) | 2 | 6 | 8 |
+| 4 | Bruno Fellype | amanhã (ter, 20/10) | 5 | 1 | 6 |
+| 5 | Heitor Quental | amanhã (ter, 20/10) | 3 | 4 | 7 |
 
-Ordem dos Pull Requests (merge): Lucas Menezes → Felipe Neves → Renato Barros → Bruno Fellype → Heitor Quental. As partes mexem em arquivos diferentes, então não há
+Ordem dos merges dos Pull Requests: Lucas Menezes → Felipe Neves → Renato Barros → Bruno Fellype → Heitor Quental. As partes mexem em arquivos diferentes, então não há
 conflito; o app só compila depois que as cinco estiverem no `dsi`.
 
-## Seu cronograma (Dia 1)
+## Seu cronograma (hoje (seg, 19/10))
 
 | Commit | Quando | Mensagem |
 |---|---|---|
-| 1 | logo no início | feat: atualiza configuração, documentação e telas de diário e desempenho |
+| 1 | quando começar | feat: atualiza configuração, documentação e telas de diário e desempenho |
+
+Merge do seu Pull Request: hoje à noite, na sua vez da ordem.
 
 ## 1. Preparar (uma vez)
 
@@ -71,4 +73,3 @@ git push -u origin lucas-menezes/atualizacao
 
 No GitHub do `dsi`, abra o Pull Request de `lucas-menezes/atualizacao` para `main` e faça o merge com
 **Create a merge commit** (não use *Squash* nem *Rebase*, senão os commits não aparecem separados).
-Faça o merge na sua vez, seguindo a ordem do grupo.
