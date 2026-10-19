@@ -42,6 +42,10 @@ export interface DisciplinaSigaa {
   codigo: string;
   titulo: string;
   periodo: string;
+  /** Faltas lançadas até agora (aba Frequência da turma). */
+  faltas?: number | null;
+  /** Máximo de faltas permitido (25% da carga horária). */
+  maxFaltas?: number | null;
 }
 
 export interface HistoricoDisciplina {
@@ -51,6 +55,8 @@ export interface HistoricoDisciplina {
   mediaFinal: number | null;
   faltas: number | null;
   situacao: string;
+  /** Carga horária, quando o relatório do SIGAA mostra essa coluna. */
+  cargaHoraria?: number | null;
 }
 
 /** Resposta da ponte com o SIGAA. */

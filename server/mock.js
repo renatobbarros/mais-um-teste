@@ -21,9 +21,9 @@ module.exports = function resumoDemo() {
       { id: 'd4', tipo: 'tarefa', titulo: 'Lista de exercícios 3', disciplina: 'Estrutura de Dados', data: emDias(7), concluida: false },
     ],
     disciplinas: [
-      { codigo: 'BD01', titulo: 'Banco de Dados', periodo: '2026.2' },
-      { codigo: 'ED01', titulo: 'Estrutura de Dados', periodo: '2026.2' },
-      { codigo: 'DSI01', titulo: 'Desenvolvimento de Sistemas de Informação', periodo: '2026.2' },
+      { codigo: 'BD01', titulo: 'Banco de Dados', periodo: '2026.2', faltas: 4, maxFaltas: 15 },
+      { codigo: 'ED01', titulo: 'Estrutura de Dados', periodo: '2026.2', faltas: 2, maxFaltas: 15 },
+      { codigo: 'DSI01', titulo: 'Desenvolvimento de Sistemas de Informação', periodo: '2026.2', faltas: 8, maxFaltas: 15 },
     ],
     historico: [
       { periodo: '2026.1', codigo: 'AL01', titulo: 'Álgebra Linear', mediaFinal: 7.4, faltas: 4, situacao: 'APROVADO' },

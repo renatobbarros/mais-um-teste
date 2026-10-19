@@ -65,9 +65,9 @@ export function resumoDemo(): ResumoSigaa {
       { id: 'dm4', tipo: 'tarefa', titulo: 'Lista de exercícios 3', disciplina: ED, data: em(7, 23, 59).toISOString(), concluida: false },
     ],
     disciplinas: [
-      { codigo: 'BD01', titulo: BD, periodo: '2026.2' },
-      { codigo: 'ED01', titulo: ED, periodo: '2026.2' },
-      { codigo: 'DSI01', titulo: DSI, periodo: '2026.2' },
+      { codigo: 'BD01', titulo: BD, periodo: '2026.2', faltas: 4, maxFaltas: 15 },
+      { codigo: 'ED01', titulo: ED, periodo: '2026.2', faltas: 2, maxFaltas: 15 },
+      { codigo: 'DSI01', titulo: DSI, periodo: '2026.2', faltas: 8, maxFaltas: 15 },
     ],
     historico: [
       { periodo: '2026.1', codigo: 'AL01', titulo: 'Álgebra Linear', mediaFinal: 6.4, faltas: 10, situacao: 'APROVADO' },

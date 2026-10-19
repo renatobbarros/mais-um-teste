@@ -1,10 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 
-import { Campo, Cabecalho, Cartao, Icone, Secao, Selo, Tela, Txt, Vazio } from '@/components/ui';
+import { Cabecalho, Cartao, Icone, Secao, Selo, Tela, Txt, Vazio } from '@/components/ui';
 import { alertasRotina, fmt, mediasRotina, pontosDeAtencao } from '@/lib/analise';
-import { estresseDoDiario, preverGpa } from '@/lib/previsao';
+import {
+  FREQUENCIA_MINIMA,
+  frequenciaDoCurso,
+  frequenciaDoPeriodo,
+  frequenciaPorDisciplina,
+  type Frequencia,
+} from '@/lib/frequencia';
 import { useAstra } from '@/lib/store';
 import type { HistoricoDisciplina } from '@/lib/types';
 
@@ -13,6 +19,9 @@ export default function Desempenho() {
   const medias = mediasRotina(diario);
   const alertasDaRotina = alertasRotina(medias);
   const atencao = pontosDeAtencao(sigaa?.historico ?? []);
+  const freqPeriodo = sigaa ? frequenciaDoPeriodo(sigaa.disciplinas) : null;
+  const freqCurso = sigaa ? frequenciaDoCurso(sigaa.historico, sigaa.disciplinas) : null;
+  const freqTurmas = sigaa ? frequenciaPorDisciplina(sigaa.disciplinas) : [];
 
   if (!sigaa && diario.length === 0) {
     return (
@@ -54,6 +63,37 @@ export default function Desempenho() {
         </View>
       ) : null}
 
+      {freqPeriodo || freqCurso ? (
+        <Secao titulo="Frequência">
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <CartaoFrequencia rotulo="Período atual" frequencia={freqPeriodo} />
+            <CartaoFrequencia rotulo="Curso todo" frequencia={freqCurso} />
+          </View>
+          {freqTurmas.length > 0 ? (
+            <Cartao style={{ gap: 10 }}>
+              <Txt v="subtitulo">Por disciplina (período atual)</Txt>
+              {freqTurmas.map((d, i) => (
+                <View key={`${d.codigo}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Txt numberOfLines={2}>{d.titulo}</Txt>
+                    <Txt v="legenda" cor="textSecondary">
+                      {d.faltas} de {d.maxFaltas} faltas permitidas
+                    </Txt>
+                  </View>
+                  <Txt style={{ fontWeight: '800' }} cor={corFrequencia(d.percentual)}>
+                    {fmtPercentual(d.percentual)}
+                  </Txt>
+                </View>
+              ))}
+            </Cartao>
+          ) : null}
+          <Txt v="legenda" cor="textMuted">
+            Frequência = 1 − faltas ÷ carga horária. Mínimo exigido: {FREQUENCIA_MINIMA}%.
+            {freqCurso?.estimada ? ' Disciplinas sem carga horária no SIGAA contam como 60 h (estimativa).' : ''}
+          </Txt>
+        </Secao>
+      ) : null}
+
       {atencao.length > 0 ? (
         <Secao titulo="Pontos de atenção">
           {atencao.map((p) => (
@@ -71,8 +111,6 @@ export default function Desempenho() {
           ))}
         </Secao>
       ) : null}
-
-      <EstimativaGpa medias={medias} />
 
       <Secao titulo="Rotina" acao="Registrar hoje" onAcao={() => router.push('/diario')}>
         {medias ? (
@@ -126,69 +164,36 @@ export default function Desempenho() {
   );
 }
 
-/** Valores típicos do conjunto usado no treino, para os campos que o app ainda não coleta. */
-const PADRAO = { frequencia: '93', redes: '2,8', idade: '23' };
+const fmtPercentual = (p: number) => `${p.toFixed(1).replace('.', ',')}%`;
 
-function numero(texto: string): number | null {
-  const n = Number(texto.replace(',', '.'));
-  return texto.trim() !== '' && Number.isFinite(n) ? n : null;
+function corFrequencia(p: number): 'danger' | 'warning' | 'success' {
+  if (p < FREQUENCIA_MINIMA) return 'danger';
+  if (p < FREQUENCIA_MINIMA + 5) return 'warning';
+  return 'success';
 }
 
-function EstimativaGpa({ medias }: { medias: { sono: number; estudo: number; estresse: number } | null }) {
-  const [estudo, setEstudo] = useState(medias ? fmt(medias.estudo).replace('.', ',') : '2,5');
-  const [sono, setSono] = useState(medias ? fmt(medias.sono).replace('.', ',') : '7');
-  const [estresse, setEstresse] = useState(medias ? fmt(medias.estresse).replace('.', ',') : '3');
-  const [frequencia, setFrequencia] = useState(PADRAO.frequencia);
-  const [redes, setRedes] = useState(PADRAO.redes);
-  const [idade, setIdade] = useState(PADRAO.idade);
-
-  const resultado = useMemo(() => {
-    const v = { estudo: numero(estudo), sono: numero(sono), estresse: numero(estresse), frequencia: numero(frequencia), redes: numero(redes), idade: numero(idade) };
-    const faixas =
-      v.estudo !== null && v.estudo >= 0 && v.estudo <= 16 &&
-      v.sono !== null && v.sono >= 0 && v.sono <= 24 &&
-      v.estresse !== null && v.estresse >= 1 && v.estresse <= 5 &&
-      v.frequencia !== null && v.frequencia >= 0 && v.frequencia <= 100 &&
-      v.redes !== null && v.redes >= 0 && v.redes <= 24 &&
-      v.idade !== null && v.idade >= 10 && v.idade <= 90;
-    if (!faixas) return null;
-    return preverGpa({
-      estudoHoras: v.estudo!,
-      sonoHoras: v.sono!,
-      estresse: estresseDoDiario(v.estresse!),
-      frequencia: v.frequencia!,
-      redesHoras: v.redes!,
-      idade: v.idade!,
-    });
-  }, [estudo, sono, estresse, frequencia, redes, idade]);
-
+function CartaoFrequencia({ rotulo, frequencia }: { rotulo: string; frequencia: Frequencia | null }) {
   return (
-    <Secao titulo="Estimativa de GPA">
-      <Cartao style={{ gap: 14 }}>
-        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-          <Icone nome="analytics-outline" tamanho={22} cor="primary" />
-          <View style={{ flex: 1 }}>
-            <Txt v="subtitulo">{resultado ? `GPA estimado: ${fmt(resultado.gpa)}` : 'Preencha os campos'}</Txt>
-            {resultado ? (
-              <Txt v="legenda" cor="textSecondary">
-                {resultado.perfil}
-              </Txt>
-            ) : null}
-          </View>
-          <Selo rotulo="Experimental" tom="alerta" />
-        </View>
-        <Campo rotulo="Horas de estudo por dia" value={estudo} onChangeText={setEstudo} keyboardType="decimal-pad" />
-        <Campo rotulo="Horas de sono por noite" value={sono} onChangeText={setSono} keyboardType="decimal-pad" />
-        <Campo rotulo="Estresse (1 a 5)" value={estresse} onChangeText={setEstresse} keyboardType="decimal-pad" />
-        <Campo rotulo="Frequência nas aulas (%)" value={frequencia} onChangeText={setFrequencia} keyboardType="decimal-pad" />
-        <Campo rotulo="Horas por dia em redes sociais" value={redes} onChangeText={setRedes} keyboardType="decimal-pad" />
-        <Campo rotulo="Idade" value={idade} onChangeText={setIdade} keyboardType="number-pad" />
-        <Txt v="legenda" cor="textMuted">
-          Estimativa feita no aparelho, sem enviar dados. O modelo foi treinado com 10 mil estudantes de vários países, não com
-          dados da UFRPE, e erra em média cerca de 0,15 ponto (escala 0 a 4). Não use para decisões sobre o seu curso.
+    <Cartao style={{ flex: 1 }}>
+      <Txt v="rotulo" cor="textMuted">
+        {rotulo}
+      </Txt>
+      {frequencia ? (
+        <>
+          <Txt style={{ fontSize: 28, fontWeight: '800' }} cor={corFrequencia(frequencia.percentual)}>
+            {fmtPercentual(frequencia.percentual)}
+          </Txt>
+          <Txt v="legenda" cor="textSecondary">
+            {frequencia.faltas} {frequencia.faltas === 1 ? 'falta' : 'faltas'} em {frequencia.cargaHoraria} h
+            {frequencia.estimada ? ' (estimada)' : ''}
+          </Txt>
+        </>
+      ) : (
+        <Txt v="legenda" cor="textSecondary">
+          Sem faltas lançadas ainda.
         </Txt>
-      </Cartao>
-    </Secao>
+      )}
+    </Cartao>
   );
 }
 

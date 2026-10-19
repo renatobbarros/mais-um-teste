@@ -35,6 +35,11 @@ async function buscarResumo(Sigaa, { url, usuario, senha }) {
     const indices = await seguro(() => vinculo.getAcademicIndices(), []);
     const turmas = await seguro(() => vinculo.getCourses(), []);
     const historico = await seguro(() => vinculo.getGradesHistory(), []);
+    // Faltas de cada turma do período (uma página por turma, uma de cada vez)
+    const frequencias = [];
+    for (const t of turmas) {
+      frequencias.push(await seguro(() => t.getAbsence(), null));
+    }
 
     return {
       demo: false,
@@ -50,14 +55,21 @@ async function buscarResumo(Sigaa, { url, usuario, senha }) {
           concluida: Boolean(a.done)
         }))
         .sort((a, b) => a.data.localeCompare(b.data)),
-      disciplinas: turmas.map((t) => ({ codigo: t.code, titulo: t.title, periodo: t.period })),
+      disciplinas: turmas.map((t, i) => ({
+        codigo: t.code,
+        titulo: t.title,
+        periodo: t.period,
+        faltas: frequencias[i] ? frequencias[i].totalAbsences : null,
+        maxFaltas: frequencias[i] ? frequencias[i].maxAbsences : null
+      })),
       historico: historico.map((h) => ({
         periodo: h.period,
         codigo: h.code,
         titulo: h.title,
         mediaFinal: h.finalGrade ?? null,
         faltas: h.absences ?? null,
-        situacao: h.situation ?? ''
+        situacao: h.situation ?? '',
+        cargaHoraria: cargaHorariaDoRelatorio(h.raw)
       }))
     };
   } finally {
@@ -65,9 +77,22 @@ async function buscarResumo(Sigaa, { url, usuario, senha }) {
   }
 }
 
+/** Procura a coluna de carga horária ("CH", "C.H.", "Carga Horária") no relatório de notas. */
+function cargaHorariaDoRelatorio(raw) {
+  if (!raw) return null;
+  for (const [cabecalho, valor] of Object.entries(raw)) {
+    const chave = cabecalho.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[.\s]/g, '');
+    if (chave === 'ch' || chave === 'chtotal' || chave === 'cargahoraria') {
+      const n = parseInt(String(valor).replace(/\D/g, ''), 10);
+      if (n > 0) return n;
+    }
+  }
+  return null;
+}
+
 /** Distingue "senha errada" de "SIGAA fora do ar". */
 function ehErroDeCredencial(erro) {
   return /invalid credentials|usu[aá]rio|senha|credenc/i.test(String((erro && erro.message) || ''));
 }
 
-module.exports = { buscarResumo, ehErroDeCredencial };
+module.exports = { buscarResumo, ehErroDeCredencial, cargaHorariaDoRelatorio };
